@@ -500,7 +500,6 @@ void ch9350l_set_keyboard_report(
     ch9350l_send_specific_data_frame(ch9350l);
 }
 
-// FIXME: malloc ?
 static ch9350l_t ch9350l_uart0 = {0};
 static ch9350l_t ch9350l_uart1 = {0};
 
