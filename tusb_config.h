@@ -39,6 +39,10 @@
 #define BOARD_TUD_RHPORT      0
 #endif
 
+#ifndef BOARD_TUH_RHPORT
+#define BOARD_TUH_RHPORT      1
+#endif
+
 // RHPort max operational speed can defined by board.mk
 #ifndef BOARD_TUD_MAX_SPEED
 #define BOARD_TUD_MAX_SPEED   OPT_MODE_DEFAULT_SPEED
@@ -63,6 +67,10 @@
 
 // Enable Device stack
 #define CFG_TUD_ENABLED       1
+
+ // Enable Device stack
+#define CFG_TUH_ENABLED       1
+#define CFG_TUH_RPI_PIO_USB   1 // Use RPI PIO USB
 
 // Default is max speed that hardware controller could support with on-chip PHY
 #define CFG_TUD_MAX_SPEED     BOARD_TUD_MAX_SPEED
@@ -91,7 +99,7 @@
 #endif
 
 //------------- CLASS -------------//
-#define CFG_TUD_HID               1
+#define CFG_TUD_HID               8 // Keep sync with CFG_TUH_HID: 4 interface / port should be enough
 #define CFG_TUD_CDC               0
 #define CFG_TUD_MSC               0
 #define CFG_TUD_MIDI              0
@@ -99,6 +107,22 @@
 
 // HID buffer size Should be sufficient to hold ID (if any) + Data
 #define CFG_TUD_HID_EP_BUFSIZE    16
+
+ //--------------------------------------------------------------------
+ // HOST CONFIGURATION
+ //--------------------------------------------------------------------
+
+ // Size of buffer to hold descriptors and other data used for enumeration
+#define CFG_TUH_ENUMERATION_BUFSIZE 256
+
+#define CFG_TUH_HUB                 1
+ // max device support (excluding hub device)
+#define CFG_TUH_DEVICE_MAX          (CFG_TUH_HUB ? 4 : 1) // hub typically has 4 ports
+
+ // Number of HID interfaces supported (A device can have multiple HID interfaces)
+#define CFG_TUH_HID                  8
+#define CFG_TUH_HID_EPIN_BUFSIZE    64
+#define CFG_TUH_HID_EPOUT_BUFSIZE   64
 
 #ifdef __cplusplus
  }

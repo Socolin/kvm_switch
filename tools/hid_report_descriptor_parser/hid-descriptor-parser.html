@@ -1,0 +1,590 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>HID Report Descriptor Parser</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --bg:#0e141b;
+    --panel:#121a24;
+    --panel-2:#0b1119;
+    --line:#1f2b38;
+    --ink:#c9d4e0;
+    --ink-dim:#7f8ea0;
+    --ink-faint:#556275;
+    /* item-type channels — colour encodes the HID bType field */
+    --main:#e0a458;   /* Main   items: Input/Output/Feature/Collection */
+    --global:#57b6b2; /* Global items: Usage Page, Report Size, … */
+    --local:#c08ac9;  /* Local  items: Usage, Usage Min/Max, … */
+    --err:#e06c75;
+    --ok:#8fbf6a;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--ui);
+    font-size:14px;line-height:1.45;
+    display:flex;flex-direction:column;min-height:100vh;
+  }
+  header{
+    padding:18px 22px 14px;border-bottom:1px solid var(--line);
+    display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+  }
+  header h1{
+    font-size:15px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;margin:0;
+    color:var(--ink);
+  }
+  header .sub{font-family:var(--mono);color:var(--ink-faint);font-size:12px}
+  .legend{margin-left:auto;display:flex;gap:16px;font-family:var(--mono);font-size:11.5px}
+  .legend span{display:inline-flex;align-items:center;gap:6px;color:var(--ink-dim)}
+  .dot{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .dot.m{background:var(--main)} .dot.g{background:var(--global)} .dot.l{background:var(--local)}
+
+  main{flex:1;display:grid;grid-template-columns:minmax(320px,1fr) minmax(420px,1.5fr);gap:0;min-height:0}
+  @media (max-width:860px){ main{grid-template-columns:1fr} }
+
+  .col{display:flex;flex-direction:column;min-height:0;min-width:0}
+  .col.input{border-right:1px solid var(--line)}
+  .col-head{
+    padding:11px 18px;border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);
+    display:flex;align-items:center;gap:12px;
+  }
+  .col-head .spacer{margin-left:auto}
+  .col-head button{
+    font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    background:transparent;color:var(--ink-dim);border:1px solid var(--line);border-radius:5px;
+    padding:4px 10px;cursor:pointer;transition:.12s;
+  }
+  .col-head button:hover{color:var(--ink);border-color:var(--main);}
+  .col-head button:focus-visible{outline:2px solid var(--main);outline-offset:2px}
+
+  textarea{
+    flex:1;resize:none;border:0;background:var(--panel-2);color:var(--ink);
+    font-family:var(--mono);font-size:14px;line-height:1.7;letter-spacing:.03em;
+    padding:16px 18px;outline:none;min-height:180px;
+  }
+  textarea::selection{background:#2a3a4d}
+
+  .status{
+    font-family:var(--mono);font-size:12px;padding:8px 18px;border-top:1px solid var(--line);
+    color:var(--ink-dim);display:flex;gap:16px;align-items:center;flex-wrap:wrap;min-height:34px;
+  }
+  .status .err{color:var(--err)}
+  .status .ok{color:var(--ok)}
+  .status b{color:var(--ink);font-weight:600}
+
+  .output{flex:1;overflow:auto;padding:6px 0 24px}
+  .output::-webkit-scrollbar{width:11px;height:11px}
+  .output::-webkit-scrollbar-thumb{background:#223040;border-radius:6px;border:2px solid var(--bg)}
+
+  /* item rows */
+  .row{
+    display:grid;grid-template-columns:78px 132px 1fr;gap:14px;
+    padding:2px 20px 2px calc(20px + var(--depth,0)*22px);
+    font-family:var(--mono);font-size:13px;white-space:nowrap;
+  }
+  .row:hover{background:#131d28}
+  .row .bytes{color:var(--ink-faint);letter-spacing:.02em}
+  .row .name{font-weight:600}
+  .row .val{color:var(--ink);white-space:normal;word-break:break-word}
+  .row .val .anno{color:var(--ink-dim)}
+  .row.t-main .name{color:var(--main)}
+  .row.t-global .name{color:var(--global)}
+  .row.t-local .name{color:var(--local)}
+  .row.collection{margin-top:6px}
+  .row.endcollection{margin-bottom:6px}
+  /* nesting guide */
+  .row::before{
+    content:"";position:absolute;
+  }
+  .tree{position:relative}
+  .guide{position:absolute;top:0;bottom:0;width:1px;background:var(--line);opacity:.6}
+
+  .flags{display:inline-flex;flex-wrap:wrap;gap:4px 6px;margin-top:2px}
+  .flag{font-size:11px;padding:1px 6px;border-radius:3px;background:#182430;color:var(--ink-dim);border:1px solid var(--line)}
+  .flag.on{color:var(--main);border-color:#3a3020}
+
+  /* report summary */
+  .reports{padding:14px 20px 6px}
+  .rep{margin:0 0 18px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+  .rep h3{
+    margin:0;padding:9px 14px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;
+    background:var(--panel-2);color:var(--ink);border-bottom:1px solid var(--line);
+    display:flex;gap:10px;align-items:baseline;
+  }
+  .rep h3 .kind{color:var(--main)}
+  .rep h3 .id{color:var(--ink-faint)}
+  .rep h3 .sz{margin-left:auto;color:var(--ink-dim)}
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+  th,td{text-align:left;padding:6px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--ink-faint);font-weight:500;font-size:11px;letter-spacing:.05em;text-transform:uppercase}
+  td{color:var(--ink)}
+  td.dim{color:var(--ink-dim)}
+  tr:last-child td{border-bottom:0}
+  .const-row td{color:var(--ink-faint)}
+
+  .empty{padding:40px 20px;text-align:center;color:var(--ink-faint);font-family:var(--mono);font-size:13px}
+</style>
+
+<header>
+  <h1>HID Descriptor</h1>
+  <span class="sub">report descriptor parser</span>
+  <div class="legend">
+    <span><i class="dot m"></i>Main</span>
+    <span><i class="dot g"></i>Global</span>
+    <span><i class="dot l"></i>Local</span>
+  </div>
+</header>
+
+<main>
+  <section class="col input">
+    <div class="col-head">
+      Hex input
+      <span class="spacer"></span>
+      <button id="sample">Load sample</button>
+      <button id="clear">Clear</button>
+    </div>
+    <textarea id="hex" spellcheck="false" placeholder="Paste report descriptor bytes — spaces, commas, 0x, newlines all fine."></textarea>
+    <div class="status" id="status"></div>
+  </section>
+
+  <section class="col">
+    <div class="col-head">
+      Decoded
+      <span class="spacer"></span>
+      <button id="copy">Copy text</button>
+    </div>
+    <div class="output" id="output"><div class="empty">Waiting for bytes…</div></div>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+/* =========================================================================
+   Core parser  —  parseHidReportDescriptor(Uint8Array | number[])
+   Pure, dependency-free. Returns { items, reports, errors }.
+   Lift this block out on its own if you just want the logic.
+   ========================================================================= */
+
+const ITEM_TYPE = { 0:"Main", 1:"Global", 2:"Local", 3:"Reserved" };
+
+const MAIN_TAGS   = {0x8:"Input",0x9:"Output",0xB:"Feature",0xA:"Collection",0xC:"End Collection"};
+const GLOBAL_TAGS = {0x0:"Usage Page",0x1:"Logical Minimum",0x2:"Logical Maximum",0x3:"Physical Minimum",
+                     0x4:"Physical Maximum",0x5:"Unit Exponent",0x6:"Unit",0x7:"Report Size",
+                     0x8:"Report ID",0x9:"Report Count",0xA:"Push",0xB:"Pop"};
+const LOCAL_TAGS  = {0x0:"Usage",0x1:"Usage Minimum",0x2:"Usage Maximum",0x3:"Designator Index",
+                     0x4:"Designator Minimum",0x5:"Designator Maximum",0x7:"String Index",
+                     0x8:"String Minimum",0x9:"String Maximum",0xA:"Delimiter"};
+
+const COLLECTIONS = {0x00:"Physical",0x01:"Application",0x02:"Logical",0x03:"Report",
+                     0x04:"Named Array",0x05:"Usage Switch",0x06:"Usage Modifier"};
+
+// Input/Output/Feature data bitfield. [bit, when-0, when-1]
+const IO_FLAGS = [
+  [0,"Data","Constant"],[1,"Array","Variable"],[2,"Absolute","Relative"],
+  [3,"No Wrap","Wrap"],[4,"Linear","Non Linear"],[5,"Preferred","No Preferred"],
+  [6,"No Null","Null State"],[7,"Non Volatile","Volatile"],[8,"Bit Field","Buffered Bytes"],
+];
+
+const USAGE_PAGES = {
+  0x01:"Generic Desktop",0x02:"Simulation",0x03:"VR",0x04:"Sport",0x05:"Game",
+  0x06:"Generic Device",0x07:"Keyboard/Keypad",0x08:"LED",0x09:"Button",0x0A:"Ordinal",
+  0x0B:"Telephony",0x0C:"Consumer",0x0D:"Digitizer",0x0F:"PID",0x10:"Unicode",
+  0x14:"Alphanumeric Display",0x40:"Medical Instrument",0x84:"Power Device",0x85:"Battery System",
+};
+
+// Per-page usage names. Covers the common pages; unknown IDs fall back to hex.
+const USAGES = {
+  0x01:{ // Generic Desktop
+    0x01:"Pointer",0x02:"Mouse",0x04:"Joystick",0x05:"Game Pad",0x06:"Keyboard",0x07:"Keypad",
+    0x08:"Multi-axis Controller",0x09:"Tablet PC System Controls",
+    0x30:"X",0x31:"Y",0x32:"Z",0x33:"Rx",0x34:"Ry",0x35:"Rz",0x36:"Slider",0x37:"Dial",
+    0x38:"Wheel",0x39:"Hat switch",0x3A:"Counted Buffer",0x40:"Vx",0x41:"Vy",0x42:"Vz",
+    0x43:"Vbrx",0x44:"Vbry",0x45:"Vbrz",0x46:"Vno",0x48:"Resolution Multiplier",
+    0x80:"System Control",0x81:"System Power Down",0x82:"System Sleep",0x83:"System Wake Up",
+    0x85:"System Menu",0x90:"D-pad Up",0x91:"D-pad Down",0x92:"D-pad Right",0x93:"D-pad Left",
+  },
+  0x07:{ // Keyboard/Keypad — modifiers are the ones descriptors reference by range
+    0x00:"No event",0x28:"Return (Enter)",0x29:"Escape",0x2A:"Backspace",0x2B:"Tab",0x2C:"Space",
+    0xE0:"Left Ctrl",0xE1:"Left Shift",0xE2:"Left Alt",0xE3:"Left GUI",
+    0xE4:"Right Ctrl",0xE5:"Right Shift",0xE6:"Right Alt",0xE7:"Right GUI",
+  },
+  0x08:{ // LED
+    0x01:"Num Lock",0x02:"Caps Lock",0x03:"Scroll Lock",0x04:"Compose",0x05:"Kana",
+    0x06:"Power",0x07:"Shift",0x08:"Do Not Disturb",0x09:"Mute",0x4B:"Generic Indicator",
+  },
+  0x0C:{ // Consumer (common subset)
+    0x01:"Consumer Control",0x30:"Power",0xB0:"Play",0xB1:"Pause",0xB5:"Scan Next",0xB6:"Scan Prev",
+    0xB7:"Stop",0xCD:"Play/Pause",0xE2:"Mute",0xE9:"Volume Up",0xEA:"Volume Down",0x223:"AC Home",
+  },
+  0x0D:{ // Digitizer
+    0x01:"Digitizer",0x02:"Pen",0x04:"Touch Screen",0x05:"Touch Pad",0x20:"Stylus",0x22:"Finger",
+    0x30:"Tip Pressure",0x32:"In Range",0x33:"Touch",0x38:"Transducer Index",0x42:"Tip Switch",
+    0x47:"Confidence",0x48:"Width",0x49:"Height",0x51:"Contact Identifier",0x54:"Contact Count",
+  },
+};
+
+function usageName(page, id){
+  if(page === 0x09) return "Button " + id;               // Button page: everything is numbered
+  if(page === 0x0A) return "Ordinal " + id;
+  const p = USAGES[page];
+  if(p && p[id] !== undefined) return p[id];
+  return null;
+}
+
+function toSigned(value, byteCount){
+  const bits = byteCount * 8;
+  if(bits === 0) return 0;
+  const signBit = 1 << (bits - 1);
+  return (value & signBit) ? value - (1 << bits) : value;
+}
+
+// hex string of a byte
+const hx = b => b.toString(16).padStart(2,"0");
+
+function parseHidReportDescriptor(bytes){
+  const items = [];
+  const errors = [];
+
+  // ---- state machine for building the report map ----
+  let global = { usagePage:null, logicalMin:null, logicalMax:null, physicalMin:null,
+                 physicalMax:null, unitExp:null, unit:null, reportSize:null,
+                 reportId:null, reportCount:null };
+  const globalStack = [];
+  let local = { usages:[], usageMin:null, usageMax:null };
+  const resetLocal = () => { local = { usages:[], usageMin:null, usageMax:null }; };
+
+  const reports = [];            // {id, kind, fields:[...], totalBits}
+  const repIndex = new Map();    // "id:kind" -> report obj
+  const getReport = (id, kind) => {
+    const key = id + ":" + kind;
+    let r = repIndex.get(key);
+    if(!r){ r = { id, kind, fields:[], totalBits:0 }; repIndex.set(key,r); reports.push(r); }
+    return r;
+  };
+
+  let depth = 0;
+  let i = 0;
+  const n = bytes.length;
+
+  while(i < n){
+    const offset = i;
+    const prefix = bytes[i];
+
+    // ---- long item (rare): 0xFE size tag data... ----
+    if(prefix === 0xFE){
+      const dataSize = bytes[i+1] ?? 0;
+      const longTag  = bytes[i+2];
+      const raw = bytes.slice(i, i+3+dataSize);
+      items.push({ offset, raw:[...raw], typeName:"Long", tagName:"Long Item",
+                   tagClass:"reserved", depth, text:"tag 0x"+hx(longTag ?? 0)+", "+dataSize+" data bytes" });
+      i += 3 + dataSize;
+      continue;
+    }
+
+    const bSize = prefix & 0x03;
+    const dataLen = bSize === 3 ? 4 : bSize;      // 0,1,2, or 4 bytes
+    const bType = (prefix >> 2) & 0x03;
+    const bTag  = (prefix >> 4) & 0x0F;
+
+    if(offset + 1 + dataLen > n){
+      errors.push("Truncated item at byte "+offset+" (needs "+dataLen+" data byte(s), "+(n-offset-1)+" left).");
+      const raw = bytes.slice(offset);
+      items.push({ offset, raw:[...raw], typeName:"?", tagName:"Truncated", tagClass:"reserved", depth, text:"" });
+      break;
+    }
+
+    // assemble little-endian data
+    const dataBytes = [];
+    let uval = 0;
+    for(let k=0;k<dataLen;k++){ const b = bytes[offset+1+k]; dataBytes.push(b); uval |= b << (8*k); }
+    uval = uval >>> 0;
+    const sval = toSigned(uval, dataLen);
+    const raw = [prefix, ...dataBytes];
+
+    const typeName = ITEM_TYPE[bType];
+    let tagName, tagClass, text = "";
+
+    if(bType === 0){                               // ---------- MAIN ----------
+      tagClass = "main";
+      tagName = MAIN_TAGS[bTag] || ("Main 0x"+bTag.toString(16));
+
+      if(bTag === 0xA){                            // Collection
+        const cname = COLLECTIONS[uval] ?? ("0x"+hx(uval));
+        text = cname + " collection";
+        items.push({ offset, raw, typeName, tagName, tagClass, depth,
+                     text, css:"collection" });
+        depth++;
+        resetLocal();
+        i += 1 + dataLen; continue;
+      }
+      if(bTag === 0xC){                            // End Collection
+        depth = Math.max(0, depth-1);
+        items.push({ offset, raw, typeName, tagName, tagClass, depth,
+                     text:"", css:"endcollection" });
+        resetLocal();
+        i += 1 + dataLen; continue;
+      }
+
+      // Input / Output / Feature -> a field in the report map
+      const kind = tagName;                        // "Input" | "Output" | "Feature"
+      const flags = IO_FLAGS
+        .filter(f => f[0] < dataLen*8)
+        .map(([bit,z,o]) => ({ label:(uval>>bit)&1 ? o : z, on:!!((uval>>bit)&1), bit }));
+      const isConst = (uval & 1) === 1;
+      const isVar   = (uval & 2) === 2;
+
+      const size  = global.reportSize ?? 0;
+      const count = global.reportCount ?? 0;
+      const id    = global.reportId ?? 0;
+      const rep   = getReport(id, kind);
+
+      // resolve usages for this field
+      let usageList = [];
+      if(local.usages.length) usageList = local.usages.slice();
+      else if(local.usageMin != null && local.usageMax != null)
+        usageList = [{ range:[local.usageMin, local.usageMax] }];
+
+      rep.fields.push({
+        bitOffset: rep.totalBits, size, count, sizeBits:size*count,
+        isConst, isVar, flags, usagePage: global.usagePage,
+        usages: usageList,
+        logicalMin: global.logicalMin, logicalMax: global.logicalMax,
+      });
+      rep.totalBits += size*count;
+
+      text = flagText(uval, dataLen);
+      items.push({ offset, raw, typeName, tagName, tagClass, depth, text, flags });
+      resetLocal();
+      i += 1 + dataLen; continue;
+    }
+
+    if(bType === 1){                               // ---------- GLOBAL ----------
+      tagClass = "global";
+      tagName = GLOBAL_TAGS[bTag] || ("Global 0x"+bTag.toString(16));
+      switch(bTag){
+        case 0x0: global.usagePage = uval;
+                  text = pageText(uval); break;
+        case 0x1: global.logicalMin = sval;  text = String(sval); break;
+        case 0x2: global.logicalMax = sval;  text = String(sval)+annoUnsigned(uval,sval); break;
+        case 0x3: global.physicalMin = sval; text = String(sval); break;
+        case 0x4: global.physicalMax = sval; text = String(sval); break;
+        case 0x5: global.unitExp = sval;     text = String(sval)+"  (10^"+sval+")"; break;
+        case 0x6: global.unit = uval;        text = "0x"+uval.toString(16); break;
+        case 0x7: global.reportSize = uval;  text = uval+" bit"+(uval===1?"":"s")+" per field"; break;
+        case 0x8: global.reportId = uval;    text = String(uval)+"  (0x"+hx(uval)+")"; break;
+        case 0x9: global.reportCount = uval; text = String(uval)+" field"+(uval===1?"":"s"); break;
+        case 0xA: globalStack.push({...global}); text = "save global state"; break;
+        case 0xB: if(globalStack.length){ global = globalStack.pop(); } else errors.push("Pop with empty stack at byte "+offset+".");
+                  text = "restore global state"; break;
+        default:  text = "0x"+uval.toString(16);
+      }
+      items.push({ offset, raw, typeName, tagName, tagClass, depth, text });
+      i += 1 + dataLen; continue;
+    }
+
+    if(bType === 2){                               // ---------- LOCAL ----------
+      tagClass = "local";
+      tagName = LOCAL_TAGS[bTag] || ("Local 0x"+bTag.toString(16));
+      const page = global.usagePage;
+      switch(bTag){
+        case 0x0: local.usages.push({ id:uval }); text = usageText(page, uval); break;
+        case 0x1: local.usageMin = uval; text = usageText(page, uval); break;
+        case 0x2: local.usageMax = uval; text = usageText(page, uval); break;
+        case 0x7: text = String(uval); break;      // String Index
+        default:  text = "0x"+uval.toString(16);
+      }
+      items.push({ offset, raw, typeName, tagName, tagClass, depth, text });
+      i += 1 + dataLen; continue;
+    }
+
+    // Reserved type
+    items.push({ offset, raw, typeName:"Reserved", tagName:"Reserved", tagClass:"reserved",
+                 depth, text:"0x"+uval.toString(16) });
+    i += 1 + dataLen;
+  }
+
+  if(depth !== 0) errors.push("Unbalanced collections: "+depth+" collection(s) never closed.");
+
+  return { items, reports, errors };
+
+  // --- small text helpers that need closure over nothing special ---
+  function pageText(id){
+    const name = USAGE_PAGES[id];
+    if(name) return name + "  (0x"+hx(id)+")";
+    if(id >= 0xFF00) return "Vendor-defined  (0x"+id.toString(16)+")";
+    return "0x"+id.toString(16);
+  }
+  function usageText(page, id){
+    const name = page!=null ? usageName(page, id) : null;
+    const hex = "0x"+id.toString(16);
+    return name ? name + "  ("+hex+")" : hex;
+  }
+  function annoUnsigned(u, s){ return (u !== s) ? "  \u00ab as unsigned: "+u+" \u00bb" : ""; }
+  function flagText(u){
+    return IO_FLAGS.filter(f=>true).map(([bit,z,o]) => (u>>bit)&1 ? o : z)
+      .slice(0, 9).join(", ");
+  }
+}
+
+/* =========================================================================
+   Input tolerance + rendering (UI layer)
+   ========================================================================= */
+
+function parseHexInput(str){
+  // accept: spaces, commas, newlines, 0x prefixes, tabs, semicolons
+  const cleaned = str.replace(/0x/gi," ").replace(/[,;]/g," ");
+  const tokens = cleaned.split(/\s+/).filter(Boolean);
+  const bytes = [];
+  const bad = [];
+  for(const t of tokens){
+    if(/^[0-9a-fA-F]{1,2}$/.test(t)) bytes.push(parseInt(t,16));
+    else if(/^[0-9a-fA-F]+$/.test(t) && t.length%2===0){       // run of hex without spaces
+      for(let k=0;k<t.length;k+=2) bytes.push(parseInt(t.substr(k,2),16));
+    } else bad.push(t);
+  }
+  return { bytes, bad };
+}
+
+const SAMPLE = "05 01 09 06 a1 01 05 07 19 e0 29 e7 15 00 25 01 75 01 95 08 81 02 "
+             + "95 01 75 08 81 01 95 05 75 01 05 08 19 01 29 05 91 02 95 01 75 03 91 01 "
+             + "95 06 75 08 15 00 26 ff 00 05 07 19 00 2a ff 00 81 00 c0";
+
+const $ = s => document.querySelector(s);
+const hexEl = $("#hex"), outEl = $("#output"), statusEl = $("#status");
+let lastText = "";
+
+function render(){
+  const raw = hexEl.value.trim();
+  if(!raw){ outEl.innerHTML = '<div class="empty">Waiting for bytes…</div>'; statusEl.innerHTML=""; return; }
+
+  const { bytes, bad } = parseHexInput(raw);
+  const { items, reports, errors } = parseHidReportDescriptor(bytes);
+
+  // ---- status line ----
+  const bits = statusParts(bytes, items, bad, errors);
+  statusEl.innerHTML = bits;
+
+  // ---- decoded item tree ----
+  const treeHtml = items.map(renderRow).join("");
+  const repsHtml = reports.length ? renderReports(reports) : "";
+  outEl.innerHTML = '<div class="tree">'+treeHtml+'</div>' + repsHtml;
+
+  lastText = buildPlainText(items);
+}
+
+function statusParts(bytes, items, bad, errors){
+  const parts = [];
+  parts.push('<span><b>'+bytes.length+'</b> bytes</span>');
+  parts.push('<span><b>'+items.length+'</b> items</span>');
+  if(bad.length) parts.push('<span class="err">ignored: '+bad.slice(0,4).map(escapeHtml).join(" ")+(bad.length>4?"\u2026":"")+'</span>');
+  if(errors.length) parts.push('<span class="err">'+escapeHtml(errors[0])+'</span>');
+  if(!bad.length && !errors.length) parts.push('<span class="ok">\u2713 well-formed</span>');
+  return parts.join("");
+}
+
+function renderRow(it){
+  const cls = ["row","t-"+(it.tagClass||"reserved"), it.css||""].join(" ").trim();
+  const bytesStr = it.raw.map(hx).join(" ");
+  let valHtml;
+  if(it.flags){
+    const chips = it.flags.map(f =>
+      '<span class="flag'+(f.on?" on":"")+'">'+escapeHtml(f.label)+'</span>').join("");
+    valHtml = '<span class="val"><span class="flags">'+chips+'</span></span>';
+  } else {
+    valHtml = '<span class="val">'+annotate(it.text)+'</span>';
+  }
+  return '<div class="'+cls+'" style="--depth:'+it.depth+'">'
+       +   '<span class="bytes">'+bytesStr+'</span>'
+       +   '<span class="name">'+escapeHtml(it.tagName)+'</span>'
+       +   valHtml
+       + '</div>';
+}
+
+// dim the "(0x..)" / «...» annotations
+function annotate(text){
+  if(!text) return "";
+  let t = escapeHtml(text);
+  t = t.replace(/(\(0x[0-9a-f]+\))/gi,'<span class="anno">$1</span>');
+  t = t.replace(/(\u00ab[^\u00bb]*\u00bb)/g,'<span class="anno">$1</span>');
+  t = t.replace(/(\(10\^-?\d+\))/g,'<span class="anno">$1</span>');
+  return t;
+}
+
+function renderReports(reports){
+  const blocks = reports.map(r => {
+    const rows = r.fields.map(f => {
+      const usage = fieldUsageLabel(f);
+      const logical = (f.logicalMin!=null||f.logicalMax!=null)
+        ? (f.logicalMin ?? "?")+" \u2026 "+(f.logicalMax ?? "?") : "\u2014";
+      const rowCls = f.isConst ? ' class="const-row"' : "";
+      return "<tr"+rowCls+">"
+        + "<td>"+f.bitOffset+"</td>"
+        + "<td>"+f.size+"\u00d7"+f.count+"</td>"
+        + "<td>"+f.sizeBits+"</td>"
+        + "<td class='dim'>"+escapeHtml(fieldTypeLabel(f))+"</td>"
+        + "<td>"+usage+"</td>"
+        + "<td class='dim'>"+logical+"</td>"
+        + "</tr>";
+    }).join("");
+    const idLabel = r.id ? "ID "+r.id : "no report ID";
+    return '<div class="rep">'
+      + '<h3><span class="kind">'+escapeHtml(r.kind)+'</span>'
+      +   '<span class="id">'+idLabel+'</span>'
+      +   '<span class="sz">'+r.totalBits+' bits \u00b7 '+Math.ceil(r.totalBits/8)+' bytes</span></h3>'
+      + '<table><thead><tr><th>Bit</th><th>Size</th><th>Bits</th><th>Type</th><th>Usage</th><th>Logical</th></tr></thead>'
+      + '<tbody>'+rows+'</tbody></table>'
+      + '</div>';
+  }).join("");
+  return '<div class="reports"><div class="col-head" style="border:0;padding:8px 0 6px">Report layout</div>'+blocks+'</div>';
+}
+
+function fieldTypeLabel(f){
+  if(f.isConst) return "constant/padding";
+  return f.isVar ? "variable" : "array";
+}
+function fieldUsageLabel(f){
+  if(f.isConst && !f.usages.length) return '<span class="dim">\u2014</span>';
+  const pageName = f.usagePage!=null ? (USAGE_PAGES[f.usagePage]||("page 0x"+hx(f.usagePage))) : "?";
+  if(!f.usages.length) return '<span class="dim">'+escapeHtml(pageName)+'</span>';
+  const u = f.usages[0];
+  if(u.range){
+    const a = f.usagePage!=null ? (usageName(f.usagePage,u.range[0])||("0x"+u.range[0].toString(16))) : u.range[0];
+    const b = f.usagePage!=null ? (usageName(f.usagePage,u.range[1])||("0x"+u.range[1].toString(16))) : u.range[1];
+    return escapeHtml(pageName+": "+a+" \u2192 "+b);
+  }
+  const names = f.usages.map(x =>
+    (f.usagePage!=null ? (usageName(f.usagePage,x.id)||("0x"+x.id.toString(16))) : "0x"+x.id.toString(16)));
+  return escapeHtml(pageName+": "+names.join(", "));
+}
+
+function buildPlainText(items){
+  return items.map(it => {
+    const pad = "  ".repeat(it.depth);
+    const bytesStr = it.raw.map(hx).join(" ").padEnd(12);
+    const line = pad + it.tagName + (it.text ? " ("+it.text+")" :
+                 (it.flags ? " ("+it.flags.map(f=>f.label).join(", ")+")" : ""));
+    return bytesStr + " | " + line;
+  }).join("\n");
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+// ---- wire up UI ----
+hexEl.addEventListener("input", render);
+$("#sample").addEventListener("click", () => { hexEl.value = SAMPLE; render(); hexEl.focus(); });
+$("#clear").addEventListener("click", () => { hexEl.value = ""; render(); hexEl.focus(); });
+$("#copy").addEventListener("click", async e => {
+  if(!lastText) return;
+  try{ await navigator.clipboard.writeText(lastText); flash(e.target,"Copied"); }
+  catch{ flash(e.target,"Copy failed"); }
+});
+function flash(btn, msg){ const t=btn.textContent; btn.textContent=msg; setTimeout(()=>btn.textContent=t,1100); }
+
+// boot with the sample loaded
+hexEl.value = SAMPLE;
+render();
+</script>
