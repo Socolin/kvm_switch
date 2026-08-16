@@ -30,6 +30,7 @@ add_executable(${target_name}
         ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
         ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
         hid_manager.c
+        logger.c
 )
 
 #[[

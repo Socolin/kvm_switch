@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "debug.h"
+#include "logger.h"
 #include "class/hid/hid.h"
 
 
@@ -17,6 +18,8 @@ typedef struct {
 static hid_mgr_t hid_mgr = {0};
 
 void hid_mgr_init() {
+    log_info("Initializing HID Manager");
+
     memset(&hid_mgr, 0, sizeof(hid_mgr));
 }
 
@@ -91,7 +94,7 @@ bool hid_mgr_register_hid(
     }
 
     if (hid == nullptr) {
-        printf("Too many HID devices registered\n");
+        log_critical("Too many HID devices registered");
         return false;
     }
 
@@ -103,7 +106,7 @@ bool hid_mgr_register_hid(
     hid->report_desc_len = report_desc_len;
     hid->use_report_id = is_report_id_present_in_descriptor(report_desc, report_desc_len);
 
-    printf("hid_mgr_register_hid: dev_addr: %u, interface_idx: %u, interface_protocol: %u, report_desc_len: %u, use_report_id: %u\n", dev_addr, interface_idx, interface_protocol, report_desc_len, hid->use_report_id);
+    logf_debug("dev_addr: %u, interface_idx: %u, interface_protocol: %u, report_desc_len: %u, use_report_id: %u", dev_addr, interface_idx, interface_protocol, report_desc_len, hid->use_report_id);
 
     return true;
 }

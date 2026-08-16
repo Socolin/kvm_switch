@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include <stdio.h>
@@ -6,6 +8,7 @@
 #include "debug.h"
 #include "hid_manager.h"
 #include "internal_com.h"
+#include "logger.h"
 #include "bsp/board_api.h"
 #include "hardware/clocks.h"
 #include "hardware/watchdog.h"
@@ -43,6 +46,7 @@ void process_computer_to_hid_message() {
     switch (cth_message.opcode) {
         case COMPUTER_TO_HID_SET_REPORT: {
             cth_message_set_report_t *data = (cth_message_set_report_t *) cth_message.data;
+            should_process_cth_messages = false;
             if (!tuh_hid_set_report(
                 data->dev_addr,
                 data->itf_idx,
@@ -51,28 +55,27 @@ void process_computer_to_hid_message() {
                 data->buffer,
                 data->buffer_len
             )) {
-                printf("Error: failed to set report for device %u interface %u\n", data->dev_addr, data->itf_idx);
-                should_process_cth_messages = false;
+                logf_error("Failed to set report for device: %u interface: %u", data->dev_addr, data->itf_idx);
                 return;
             }
-            printf("Successfully set report for device %u interface %u\n", data->dev_addr, data->itf_idx);
-            debug_print_buffer(data->buffer, data->buffer_len);
+            logf_info("Successfully set report for device: %u interface: %u", data->dev_addr, data->itf_idx);
+            log_debug_hex_buffer(data->buffer, data->buffer_len);
             break;
         }
         case COMPUTER_TO_HID_SET_HID_PROTOCOL: {
             const cth_message_set_hid_protocol_t *data = (cth_message_set_hid_protocol_t *) cth_message.data;
             if (tuh_hid_get_protocol(data->dev_addr, data->itf_idx) == data->hid_protocol)
                 break;
+            should_process_cth_messages = false;
             if (!tuh_hid_set_protocol(data->dev_addr, data->itf_idx, data->hid_protocol)) {
-                printf("Error: failed to set HID protocol for device %u interface %u to %u\n", data->dev_addr,
+                logf_error("Failed to set HID protocol for device %u interface %u to %u", data->dev_addr,
                        data->itf_idx, data->hid_protocol);
-                should_process_cth_messages = false;
                 return;
             }
             break;
         }
         default:
-            printf("Error: unknown computer to hid opcode %u\n", cth_message.opcode);
+            logf_critical("Unknown computer to hid opcode %u", cth_message.opcode);
             break;
     }
 
@@ -80,9 +83,7 @@ void process_computer_to_hid_message() {
 }
 
 static void core1_main() {
-    // sleep_ms(1000);
-
-    printf("KVM starting %s\n", BUILD_DATE);
+    log_info("Starting USB Host on core 1");
 
     const pio_usb_configuration_t pio_cfg = {
         .pin_dp = 16,
@@ -101,7 +102,7 @@ static void core1_main() {
 
     pio_usb_host_add_port(18, PIO_USB_PINOUT_DPDM);
 
-    printf("KVM ready\n");
+    log_info("USB Host ready");
 
     while (true) {
         tuh_task();
@@ -114,6 +115,8 @@ static void core1_main() {
 void tuh_mount_cb(
     const uint8_t dev_addr
 ) {
+    logf_debug("dev_addr: %u", dev_addr);
+
     const htc_message_device_mount_data_t message_data = {
         .dev_addr = dev_addr,
     };
@@ -124,12 +127,14 @@ void tuh_mount_cb(
     memcpy(&htc_message.data, &message_data, sizeof(message_data));
     queue_try_add(&htc_msg_queue, &htc_message);
 
-    printf("[%u] Device is mounted\n", dev_addr);
+    logf_info("Device %u is mounted", dev_addr);
 }
 
 void tuh_umount_cb(
     const uint8_t dev_addr
 ) {
+    logf_debug("dev_addr: %u", dev_addr);
+
     const htc_message_device_umount_data_t message_data = {
         .dev_addr = dev_addr,
     };
@@ -140,7 +145,7 @@ void tuh_umount_cb(
     memcpy(&htc_message.data, &message_data, sizeof(message_data));
     queue_try_add(&htc_msg_queue, &htc_message);
 
-    printf("[%u] Device is unmounted\n", dev_addr);
+    logf_info("Device %u is unmounted", dev_addr);
 }
 
 void tuh_hid_mount_cb(
@@ -149,16 +154,19 @@ void tuh_hid_mount_cb(
     uint8_t const *report_desc,
     const uint16_t desc_len
 ) {
+    logf_debug("dev_addr: %u, idx: %u", dev_addr, idx);
+    log_debug_hex_buffer(report_desc, desc_len);
+
     uint16_t vid, pid;
     if (!tuh_vid_pid_get(dev_addr, &vid, &pid)) {
-        printf("Could not get VID/PID for device %u\n", dev_addr);
+        logf_error("Could not get VID/PID for device: %u", dev_addr);
         return;
     }
 
     uint8_t const itf_protocol = tuh_hid_interface_protocol(dev_addr, idx);
     uint8_t *data_report_desc = malloc(desc_len);
     if (data_report_desc == NULL) {
-        printf("Not enough memory to mount HID device\n");
+        log_critical("Not enough memory to mount HID device");
         return;
     }
 
@@ -177,28 +185,23 @@ void tuh_hid_mount_cb(
         .data_len = sizeof(message_data),
     };
 
-
     memcpy(&htc_message.data, &message_data, sizeof(message_data));
     queue_try_add(&htc_msg_queue, &htc_message);
 
-    printf("[%u] HID idx: %u is mounted ift: %u (vid: %04x, pid: %04x)\n", dev_addr, idx, itf_protocol, vid, pid);
-    debug_print_buffer(report_desc, desc_len);
-    printf("\n");
-
-
     if (!tuh_hid_receive_report(dev_addr, idx)) {
-        printf("Error: cannot request report\n");
+        log_error("tuh_hid_receive_report failed");
     }
 }
 
 void tuh_hid_set_report_complete_cb(
-    uint8_t dev_addr,
-    uint8_t idx,
-    uint8_t report_id,
-    uint8_t report_type,
-    uint16_t len) {
-    printf("Received report complete callback for dev_addr: %u, idx: %u, report_id: %u, report_type: %u, len: %u\n",
-           dev_addr, idx, report_id, report_type, len);
+    const uint8_t dev_addr,
+    const uint8_t idx,
+    const uint8_t report_id,
+    const uint8_t report_type,
+    const uint16_t len
+) {
+    logf_debug("dev_addr: %u, idx: %u, report_id: %u, report_type: %u len: %u", dev_addr, idx, report_id, report_type,
+               len);
     should_process_cth_messages = true;
 }
 
@@ -207,7 +210,7 @@ void tuh_hid_set_protocol_complete_cb(
     const uint8_t idx,
     const uint8_t protocol
 ) {
-    printf("[%u] HID idx: %u set protocol to %u\n", dev_addr, idx, protocol);
+    logf_debug("dev_addr: %u, idx: %u, protocol: %u", dev_addr, idx, protocol);
     should_process_cth_messages = true;
 }
 
@@ -215,6 +218,7 @@ void tuh_hid_umount_cb(
     const uint8_t dev_addr,
     const uint8_t idx
 ) {
+    logf_debug("dev_addr: %u, idx: %u", dev_addr, idx);
     const htc_message_hid_umount_data_t message_data = {
         .dev_addr = dev_addr,
         .idx = idx,
@@ -226,7 +230,7 @@ void tuh_hid_umount_cb(
     memcpy(&htc_message.data, &message_data, sizeof(message_data));
     queue_try_add(&htc_msg_queue, &htc_message);
 
-    printf("[%u] HID idx: %u is unmounted\n", dev_addr, idx);
+    logf_info("HID device unmounted. dev_addr: %u, idx: %u", dev_addr, idx);
 }
 
 
@@ -236,11 +240,11 @@ void tuh_hid_report_received_cb(
     uint8_t const *report,
     const uint16_t len
 ) {
-    printf("Received report from device %u, interface %u, length %u\n", dev_addr, idx, len);
-    debug_print_buffer(report, len);
+    logf_debug("dev_addr: %u, idx: %u", dev_addr, idx);
+    log_debug_hex_buffer(report, len);
 
     if (len == 0) {
-        printf("Received empty report\n");
+        log_warning("Received empty report");
         return;
     }
 
@@ -257,7 +261,7 @@ void tuh_hid_report_received_cb(
         .hid_protocol = hid_protocol,
     };
     if (len > sizeof(message_data.report_data)) {
-        printf("Error: report data too long: %u\n", len);
+        logf_error("report data too long: %u", len);
         return;
     }
     memcpy(
@@ -273,28 +277,20 @@ void tuh_hid_report_received_cb(
     memcpy(&htc_message.data, &message_data, sizeof(message_data));
     queue_try_add(&htc_msg_queue, &htc_message);
 
-    /*
-    bool protocol_switched = false;
-    if (itf_protocol == HID_ITF_PROTOCOL_MOUSE || itf_protocol == HID_ITF_PROTOCOL_KEYBOARD) {
-        if (tuh_hid_get_protocol(dev_addr, idx) == HID_PROTOCOL_BOOT) {
-            if (!tuh_hid_set_protocol(dev_addr, idx, HID_PROTOCOL_REPORT)) {
-                printf("Could not set protocol to report for device %u\n", dev_addr);
-            } else {
-                printf("Set protocol to report for device %u\n", dev_addr);
-                protocol_switched = true;
-            }
-        }
-    }
-
-    if (!protocol_switched) {*/
     if (!tuh_hid_receive_report(dev_addr, idx)) {
-        printf("Error: cannot request report\n");
+        log_error("tuh_hid_receive_report failed");
     }
-    /*}*/
 }
 
 int main() {
     watchdog_enable(5000, 1);
+
+    stdio_init_all();
+
+    logger_init(LOG_LEVEL_DEBUG, LOG_LEVEL_DEBUG);
+
+    log_info("KVM is starting");
+    logf_info("Version: %s", BUILD_DATE);
 
     // To use Pico-PIO-USB the system clock should be multiple of 12MHz.
     // USB requires a very precise clock and since PIO are working at a multiple
@@ -305,10 +301,11 @@ int main() {
 
     sleep_ms(10);
 
-    stdio_init_all();
 
     queue_init(&htc_msg_queue, sizeof(hid_to_computer_message_t), 32);
     queue_init(&cth_msg_queue, sizeof(computer_to_hid_message_t), 32);
+
+    log_info("Initializing board");
 
     board_init();
 
@@ -320,16 +317,24 @@ int main() {
     board_init_after_tusb();
     uint64_t last_device_mounted = 0;
 
+    log_debug("Starting main loop on core 0");
+
     while (true) {
         tud_task(); // tinyusb device task
 
         if (last_device_mounted) {
-            uint64_t now = time_us_64();
-            // Wait 500 ms before setting up usb device to wait for all device to be mounted
+            const uint64_t now = time_us_64();
+            // When a device is mounted, wait 1 second before setting up the pico as a usb device.
+            // This allow to avoid multiple re-initializations of the usb device each time.
+            // FIXME: Can probably be done immediately after the second device is mounted. or other
             if (now - last_device_mounted > 1'000'000) {
                 last_device_mounted = 0;
-                printf("Initializing USB device\n");
-                tud_deinit(BOARD_TUD_RHPORT);
+                if (tud_inited()) {
+                    log_info("Re-initializing USB device");
+                    tud_deinit(BOARD_TUD_RHPORT);
+                } else {
+                    log_info("Initializing USB device");
+                }
 
                 // init device stack on configured roothub port
                 const tusb_rhport_init_t rh_init = {
@@ -337,7 +342,7 @@ int main() {
                     .speed = TUD_OPT_HIGH_SPEED ? TUSB_SPEED_HIGH : TUSB_SPEED_FULL
                 };
                 if (!tud_rhport_init(BOARD_TUD_RHPORT, &rh_init)) {
-                    printf("Failed to initialize USB device\n");
+                    log_error("Failed to initialize USB device");
                     return 0;
                 }
             }
@@ -373,24 +378,20 @@ int main() {
                 }
                 case HID_TO_COMPUTER_HID_REPORT: {
                     const htc_message_hid_report_data_t *data = (htc_message_hid_report_data_t *) htc_message.data;
-                    if (data->report_data_len > 2 && data->report_data[2] == 0x48) {
-                        printf("Resetting USB\n");
+                    // FIXME: make this configurable
+                    if (data->report_data_len > 2 && data->report_data[2] == 0x48 && data->itf_protocol == HID_ITF_PROTOCOL_KEYBOARD) {
+                        log_critical("Resetting PICO in BOOTSEL");
                         multicore_reset_core1();
                         reset_usb_boot(0, 0);
                     }
                     if (!tud_hid_ready()) {
-                        printf("tud hid not ready\n");
+                        log_warning("tud_hid_ready == false, skip report");
                         continue;
                     }
                     const uint8_t interface_idx = hid_mgr_get_hid_idx(data->dev_addr, data->idx);
 
-                    /*
-                    printf("dev_addr: %u, idx: %u, sending %u\n",data->dev_addr, data->idx, data->report_data_len);
-                    printf("  ");
-                    debug_print_buffer(data->report_data, data->report_data_len);
-                    printf("\n");*/
                     if (!tud_hid_n_report(interface_idx, data->report_id, data->report_data, data->report_data_len)) {
-                        printf("tud_hid_n_report failed\n");
+                        log_error("tud_hid_n_report failed");
                     }
                     break;
                 }
@@ -404,6 +405,8 @@ int main() {
 }
 
 void tud_mount_cb() {
+    logf_debug("device mounted");
+
     for (uint8_t i = 0; i < hid_mgr_get_max_hid_count(); i++) {
         const hid_t *hid = hid_mgr_get(i);
         if (hid == nullptr) {
@@ -414,7 +417,7 @@ void tud_mount_cb() {
             continue;
 
         const uint8_t hid_protocol = tud_hid_n_get_protocol(i);
-        printf("HID protocol for device %u interface %u is %u\n", hid->dev_addr, hid->interface_idx, hid_protocol);
+        logf_debug("HID protocol for device: %u interface: %u is: %u", hid->dev_addr, hid->interface_idx, hid_protocol);
         const cth_message_set_hid_protocol_t message_data = {
             .dev_addr = hid->dev_addr,
             .itf_idx = hid->interface_idx,
@@ -434,11 +437,10 @@ uint16_t tud_hid_get_report_cb(
     const uint8_t report_id,
     const hid_report_type_t report_type,
     uint8_t *buffer,
-    const uint16_t reqlen) {
-    // TODO not Implemented
-    (void) instance;
-    (void) report_id;
-    (void) report_type;
+    const uint16_t reqlen
+) {
+    logf_debug("instance: %u, report_id: %u, report_type: %u", instance, report_id, report_type);
+
     (void) buffer;
     (void) reqlen;
 
@@ -453,11 +455,8 @@ void tud_hid_set_report_cb(
     uint8_t const *buffer,
     const uint16_t bufsize
 ) {
-    printf("tud_hid_set_report_cb called \n");
-    printf("instance: %u, report_id: %u, report_type: %u, bufsize: %u\n", instance, report_id, report_type, bufsize);
-    printf("buffer: ");
-    debug_print_buffer(buffer, bufsize);
-    printf("\n");
+    logf_debug("instance: %u, report_id: %u, report_type: %u", instance, report_id, report_type);
+    log_debug_hex_buffer(buffer, bufsize);
 
     const hid_t *hid = hid_mgr_get(instance);
     if (hid == nullptr)
@@ -471,7 +470,7 @@ void tud_hid_set_report_cb(
         .buffer_len = bufsize,
     };
     if (bufsize > sizeof(message_data.buffer)) {
-        printf("buffer size too large\n");
+        log_error("bufsize is too large");
         return;
     }
     memcpy(message_data.buffer, buffer, bufsize);
@@ -487,7 +486,7 @@ void tud_hid_set_protocol_cb(
     const uint8_t instance,
     const uint8_t protocol
 ) {
-    printf("tud_hid_set_protocol_cb called %u %u\n", instance, protocol);
+    logf_debug("instance:%u protocol:%u", instance, protocol);
 
     const hid_t *hid = hid_mgr_get(instance);
     if (hid == nullptr)
