@@ -54,22 +54,23 @@ static void kvm_switch_process_actions() {
     kvm_switch_action_t kvm_switch_action;
     if (queue_try_remove(&kvm_switch_action_queue, &kvm_switch_action)) {
         switch (kvm_switch_action.opcode) {
-            case KVM_SWITCH_DEVICE_MOUNT: {
+            case KVM_SWITCH_OP_DEVICE_MOUNT: {
                 last_device_mounted = time_us_64();
                 device_mounted_count++;
                 break;
             }
-            case KVM_SWITCH_DEVICE_UMOUNT: {
+            case KVM_SWITCH_OP_DEVICE_UMOUNT: {
                 assert(device_mounted_count > 0);
                 device_mounted_count--;
                 break;
             }
-            case KVM_SWITCH_HID_MOUNT: {
-                const kvm_switch_action_hid_mount_data_t *data = (kvm_switch_action_hid_mount_data_t *) kvm_switch_action.
+            case KVM_SWITCH_OP_HID_MOUNT: {
+                const kvm_switch_action_hid_mount_data_t *data = (kvm_switch_action_hid_mount_data_t *)
+                        kvm_switch_action.
                         data;
                 if (!hid_mgr_register_hid(
                         data->dev_addr,
-                        data->itf_idx,
+                        data->host_hid_idx,
                         data->itf_protocol,
                         data->report_desc,
                         data->desc_len)
@@ -78,27 +79,36 @@ static void kvm_switch_process_actions() {
                 }
                 break;
             }
-            case KVM_SWITCH_HID_UMOUNT: {
-                const kvm_switch_action_hid_umount_data_t *data = (kvm_switch_action_hid_umount_data_t *) kvm_switch_action.
+            case KVM_SWITCH_OP_HID_UMOUNT: {
+                const kvm_switch_action_hid_umount_data_t *data = (kvm_switch_action_hid_umount_data_t *)
+                        kvm_switch_action.
                         data;
-                hid_mgr_unregister_hid(data->dev_addr, data->idx);
+                hid_mgr_unregister_hid(data->dev_addr, data->host_hid_idx);
                 break;
             }
-            case KVM_SWITCH_HID_REPORT: {
-                const kvm_switch_action_hid_report_data_t *data = (kvm_switch_action_hid_report_data_t *) kvm_switch_action.
+            case KVM_SWITCH_OP_HID_REPORT: {
+                const kvm_switch_action_hid_report_data_t *data = (kvm_switch_action_hid_report_data_t *)
+                        kvm_switch_action.
                         data;
                 // FIXME: make this configurable
-                if (data->report_data_len > 2 && data->report_data[2] == 0x48 && data->itf_protocol == HID_ITF_PROTOCOL_KEYBOARD) {
+                if (data->report_data_len > 2 && data->report_data[2] == 0x48 && data->itf_protocol ==
+                    HID_ITF_PROTOCOL_KEYBOARD) {
                     log_critical("Resetting PICO in BOOTSEL");
                     multicore_reset_core1();
                     reset_usb_boot(0, 0);
                 }
-                const uint8_t kvm_hid_idx = hid_mgr_get_hid_idx(data->dev_addr, data->idx);
-                if (!tud_hid_n_ready(kvm_hid_idx)) {
-                    logf_warning("tud_hid_ready(%u) == false, skip report", kvm_hid_idx);
+
+                const hid_t *hid = hid_mgr_get_by_host_idx(data->dev_addr, data->host_hid_idx);
+                if (hid == nullptr) {
+                    logf_warning("hid_mgr_get_by_host_idx returned nullptr dev_addr: %u host_hid_idx: %u",
+                                 data->dev_addr, data->host_hid_idx);
                     return;
                 }
-                if (!tud_hid_n_report(kvm_hid_idx, data->report_id, data->report_data, data->report_data_len)) {
+                if (!tud_hid_n_ready(hid->kvm_hid_idx)) {
+                    logf_warning("tud_hid_ready(%u) == false, skip report", hid->kvm_hid_idx);
+                    return;
+                }
+                if (!tud_hid_n_report(hid->kvm_hid_idx, data->report_id, data->report_data, data->report_data_len)) {
                     log_error("tud_hid_n_report failed");
                 }
                 break;
@@ -127,16 +137,16 @@ void kvm_switch_task() {
 void kvm_switch_computer_set_hid_protocol(
     const uint8_t computer_id,
     const uint8_t kvm_hid_idx,
-    const uint8_t protocol
+    const uint8_t hid_protocol
 ) {
     assert(computer_id < MAX_COMPUTER);
     assert(kvm_hid_idx < CFG_TUH_HID);
 
     computer_t *computer = &kvm_switch.computers[computer_id];
-    computer->hid_protocol_per_interface[kvm_hid_idx] = protocol;
+    computer->hid_protocol_per_interface[kvm_hid_idx] = hid_protocol;
 
     if (kvm_switch.active_computer_id == computer_id) {
-        usb_host_enqueue_set_protocol(kvm_hid_idx, protocol);
+        usb_host_enqueue_set_protocol(kvm_hid_idx, hid_protocol);
     }
 }
 
@@ -144,13 +154,12 @@ void kvm_switch_computer_set_report(
     const uint8_t computer_id,
     const uint8_t kvm_hid_idx,
     const uint8_t report_id,
-    const uint8_t report_type, // hid_report_type_t
+    const uint8_t report_type,
     uint8_t const *report_data,
     const uint16_t report_data_len
 ) {
     assert(computer_id < MAX_COMPUTER);
     assert(kvm_hid_idx < CFG_TUH_HID);
-
 
     computer_t *computer = &kvm_switch.computers[computer_id];
     computer_hid_report_t *saved_report = nullptr;
@@ -232,7 +241,7 @@ bool kvm_switch_enqueue_device_mount(
         .dev_addr = dev_addr,
     };
 
-    return kvm_switch_enqueue_action(KVM_SWITCH_DEVICE_MOUNT, &action_data, sizeof(action_data));
+    return kvm_switch_enqueue_action(KVM_SWITCH_OP_DEVICE_MOUNT, &action_data, sizeof(action_data));
 }
 
 bool kvm_switch_enqueue_device_umount(
@@ -242,12 +251,12 @@ bool kvm_switch_enqueue_device_umount(
         .dev_addr = dev_addr,
     };
 
-    return kvm_switch_enqueue_action(KVM_SWITCH_DEVICE_UMOUNT, &action_data, sizeof(action_data));
+    return kvm_switch_enqueue_action(KVM_SWITCH_OP_DEVICE_UMOUNT, &action_data, sizeof(action_data));
 }
 
 bool kvm_switch_enqueue_hid_mount(
     const uint8_t dev_addr,
-    const uint8_t hid_interface_idx,
+    const uint8_t host_hid_idx,
     const uint8_t interface_protocol,
     const uint16_t pid,
     const uint16_t vid,
@@ -263,7 +272,7 @@ bool kvm_switch_enqueue_hid_mount(
     memcpy(data_report_desc, report_desc, desc_len);
     const kvm_switch_action_hid_mount_data_t action_data = {
         .dev_addr = dev_addr,
-        .itf_idx = hid_interface_idx,
+        .host_hid_idx = host_hid_idx,
         .itf_protocol = interface_protocol,
         .report_desc = data_report_desc,
         .desc_len = desc_len,
@@ -271,34 +280,41 @@ bool kvm_switch_enqueue_hid_mount(
         .vid = vid,
     };
 
-    return kvm_switch_enqueue_action(KVM_SWITCH_HID_MOUNT, &action_data, sizeof(action_data));
+    return kvm_switch_enqueue_action(KVM_SWITCH_OP_HID_MOUNT, &action_data, sizeof(action_data));
 }
 
 bool kvm_switch_enqueue_hid_umount(
     const uint8_t dev_addr,
-    const uint8_t hid_interface_idx
+    const uint8_t host_hid_idx
 ) {
     const kvm_switch_action_hid_umount_data_t action_data = {
         .dev_addr = dev_addr,
-        .idx = hid_interface_idx,
+        .host_hid_idx = host_hid_idx,
     };
-    return kvm_switch_enqueue_action(KVM_SWITCH_HID_UMOUNT, &action_data, sizeof(action_data));
+    return kvm_switch_enqueue_action(KVM_SWITCH_OP_HID_UMOUNT, &action_data, sizeof(action_data));
 }
 
 bool kvm_switch_enqueue_report(
     const uint8_t dev_addr,
-    const uint8_t hid_interface_idx,
+    const uint8_t host_hid_idx,
     const uint8_t itf_protocol,
     const uint8_t hid_protocol,
     uint8_t const *report,
     const uint16_t report_len
 ) {
-    const bool use_report_id = hid_protocol == HID_PROTOCOL_REPORT && hid_mgr_is_hid_using_report_id(
-                                   dev_addr, hid_interface_idx);
+    const hid_t *hid = hid_mgr_get_by_host_idx(dev_addr, host_hid_idx);
+    if (!hid) {
+        logf_error("hid not found for dev_addr %u, host_hid_idx %u", dev_addr, host_hid_idx);
+        return false;
+    }
+
+    // If the interface protocol is report (there is not report_id in boot mode) and the report_descriptor included
+    // a report_id, then the report_id is the first byte of the report and need to be extracted.
+    const bool use_report_id = hid_protocol == HID_PROTOCOL_REPORT && hid->use_report_id;
 
     kvm_switch_action_hid_report_data_t action_data = {
         .dev_addr = dev_addr,
-        .idx = hid_interface_idx,
+        .host_hid_idx = host_hid_idx,
         .report_data_len = use_report_id ? report_len - 1 : report_len,
         .report_id = use_report_id ? report[0] : 0,
         .itf_protocol = itf_protocol,
@@ -315,5 +331,5 @@ bool kvm_switch_enqueue_report(
         action_data.report_data_len
     );
 
-    return kvm_switch_enqueue_action(KVM_SWITCH_HID_REPORT, &action_data, sizeof(action_data));
+    return kvm_switch_enqueue_action(KVM_SWITCH_OP_HID_REPORT, &action_data, sizeof(action_data));
 }

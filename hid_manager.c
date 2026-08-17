@@ -20,6 +20,9 @@ void hid_mgr_init() {
     log_info("Initializing HID Manager");
 
     memset(&hid_mgr, 0, sizeof(hid_mgr));
+    for (uint8_t kvm_hid_idx = 0; kvm_hid_idx < MAX_HID_COUNT; kvm_hid_idx++) {
+        hid_mgr.hid[kvm_hid_idx].kvm_hid_idx = kvm_hid_idx;
+    }
 }
 
 // See hid1_11.pdf
@@ -80,16 +83,16 @@ static bool is_report_id_present_in_descriptor(
 
 bool hid_mgr_register_hid(
     const uint8_t dev_addr,
-    const uint8_t interface_idx,
-    const uint8_t interface_protocol,
+    const uint8_t host_hid_idx,
+    const uint8_t itf_protocol,
     uint8_t *report_desc,
     const uint16_t report_desc_len
 ) {
     hid_t *hid = nullptr;
-    for (uint8_t hid_idx = 0; hid_idx < MAX_HID_COUNT; hid_idx++) {
-        if (hid_mgr.hid[hid_idx].enabled)
+    for (uint8_t kvm_hid_idx = 0; kvm_hid_idx < MAX_HID_COUNT; kvm_hid_idx++) {
+        if (hid_mgr.hid[kvm_hid_idx].enabled)
             continue;
-        hid = &hid_mgr.hid[hid_idx];
+        hid = &hid_mgr.hid[kvm_hid_idx];
     }
 
     if (hid == nullptr) {
@@ -99,13 +102,14 @@ bool hid_mgr_register_hid(
 
     hid->enabled = true;
     hid->dev_addr = dev_addr;
-    hid->interface_idx = interface_idx;
-    hid->interface_protocol = interface_protocol;
+    hid->host_hid_idx = host_hid_idx;
+    hid->itf_protocol = itf_protocol;
     hid->report_desc = report_desc;
     hid->report_desc_len = report_desc_len;
     hid->use_report_id = is_report_id_present_in_descriptor(report_desc, report_desc_len);
 
-    logf_debug("dev_addr: %u, interface_idx: %u, interface_protocol: %u, report_desc_len: %u, use_report_id: %u", dev_addr, interface_idx, interface_protocol, report_desc_len, hid->use_report_id);
+    logf_debug("dev_addr: %u, interface_idx: %u, interface_protocol: %u, report_desc_len: %u, use_report_id: %u",
+               dev_addr, host_hid_idx, itf_protocol, report_desc_len, hid->use_report_id);
 
     return true;
 }
@@ -113,61 +117,46 @@ bool hid_mgr_register_hid(
 
 void hid_mgr_unregister_hid(
     const uint8_t dev_addr,
-    const uint8_t interface_idx
+    const uint8_t host_hid_idx
 ) {
-    for (uint8_t hid_idx = 0; hid_idx < MAX_HID_COUNT; hid_idx++) {
-        hid_t *hid = &hid_mgr.hid[hid_idx];
+    for (uint8_t kvm_hid_idx = 0; kvm_hid_idx < MAX_HID_COUNT; kvm_hid_idx++) {
+        hid_t *hid = &hid_mgr.hid[kvm_hid_idx];
         if (!hid->enabled)
             continue;
 
-        if (hid->dev_addr == dev_addr && hid->interface_idx == interface_idx) {
+        if (hid->dev_addr == dev_addr && hid->host_hid_idx == host_hid_idx) {
             free(hid->report_desc);
             memset(hid, 0, sizeof(hid_t));
+            hid->kvm_hid_idx = kvm_hid_idx;
             return;
         }
     }
 }
 
-bool hid_mgr_is_hid_using_report_id(
+const hid_t *hid_mgr_get_by_host_idx(
     const uint8_t dev_addr,
-    const uint8_t interface_idx
+    const uint8_t host_hid_idx
 ) {
-    for (uint8_t hid_idx = 0; hid_idx < MAX_HID_COUNT; hid_idx++) {
-        const hid_t *hid = &hid_mgr.hid[hid_idx];
+    for (uint8_t kvm_hid_idx = 0; kvm_hid_idx < MAX_HID_COUNT; kvm_hid_idx++) {
+        const hid_t *hid = &hid_mgr.hid[kvm_hid_idx];
         if (!hid->enabled)
             continue;
 
-        if (hid->dev_addr == dev_addr && hid->interface_idx == interface_idx) {
-            return hid->use_report_id;
-        }
-    }
-    return false;
-}
-
-int hid_mgr_get_hid_idx(
-    const uint8_t dev_addr,
-    const uint8_t interface_idx
-) {
-    for (uint8_t hid_idx = 0; hid_idx < MAX_HID_COUNT; hid_idx++) {
-        const hid_t *hid = &hid_mgr.hid[hid_idx];
-        if (!hid->enabled)
-            continue;
-
-        if (hid->dev_addr == dev_addr && hid->interface_idx == interface_idx) {
-            return hid_idx;
+        if (hid->dev_addr == dev_addr && hid->host_hid_idx == host_hid_idx) {
+            return hid;
         }
     }
 
-    return 0;
+    return nullptr;
 }
 
-const hid_t* hid_mgr_get(
-    const uint8_t hid_idx
+const hid_t *hid_mgr_get_by_kvm_idx(
+    const uint8_t kvm_hid_idx
 ) {
-    if (hid_idx > MAX_HID_COUNT)
+    if (kvm_hid_idx > MAX_HID_COUNT)
         return nullptr;
 
-    const hid_t *hid = &hid_mgr.hid[hid_idx];
+    const hid_t *hid = &hid_mgr.hid[kvm_hid_idx];
     if (!hid->enabled)
         return nullptr;
 

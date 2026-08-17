@@ -15,6 +15,13 @@
 #define BUILD_DATE "No date"
 #endif
 
+// https://pid.codes/pids/
+// FIXME: Request PID when needed. Also evaluate possibility to make this configurable to allow to easily change it to
+// avoid hid caching issue on windows.
+#define USB_PID   0x50C0
+#define USB_VID   0x1209
+
+
 static void core1_main() {
     log_info("Starting USB Host on core 1");
 
@@ -51,7 +58,7 @@ int main() {
 
     hid_mgr_init();
     kvm_switch_init();
-    usb_device_init();
+    usb_device_init(0, USB_VID, USB_PID);
 
     log_info("Initializing board");
 

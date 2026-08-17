@@ -1,6 +1,12 @@
 #pragma once
 
-void usb_device_init();
+#include <stdint.h>
+
+void usb_device_init(
+    uint8_t computer_id,
+    uint16_t vid,
+    uint16_t pid
+);
 
 void usb_device_task();
 
