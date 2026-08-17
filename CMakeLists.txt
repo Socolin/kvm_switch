@@ -19,7 +19,7 @@ add_compile_definitions(BUILD_DATE="${BUILD_DATE}")
 add_subdirectory("./Pico-PIO-USB" pico_pio_usb)
 
 add_executable(${target_name}
-        kvm.c
+        main.c
         ch9350l.c
         ch9350l.h
         ch9329.c
@@ -31,6 +31,9 @@ add_executable(${target_name}
         ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
         hid_manager.c
         logger.c
+        usb_device.c
+        kvm_switch.c
+        usb_host.c
 )
 
 #[[

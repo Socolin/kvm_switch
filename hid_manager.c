@@ -2,7 +2,6 @@
 
 #define MAX_HID_COUNT CFG_TUH_HID
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
