@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 
+#include "computer_manager.h"
 #include "hid_manager.h"
 #include "logger.h"
 #include "usb_device.h"
@@ -10,28 +11,14 @@
 #include "pico/multicore.h"
 #include "pico/util/queue.h"
 
-typedef struct computer_hid_report {
-    uint8_t report_id;
-    hid_report_type_t report_type;
-    uint16_t report_data_len;
-    uint8_t *report_data;
-    struct computer_hid_report *next;
-} computer_hid_report_t;
-
-typedef struct {
-    uint8_t computer_id;
-    uint8_t hid_protocol_per_interface[CFG_TUH_HID]; // BOOT / REPORT
-    computer_hid_report_t *hid_reports_per_interface[CFG_TUH_HID];
-} computer_t;
-
 typedef struct {
     uint8_t active_computer_id;
-    computer_t computers[MAX_COMPUTER];
+    uint64_t last_device_mounted;
+    uint8_t device_mounted_count;
+    queue_t action_queue;
 } kvm_switch_t;
 
-static kvm_switch_t kvm_switch;
-
-static queue_t kvm_switch_action_queue = {};
+static kvm_switch_t kvm_switch = {};
 
 // ╔══════════════════════════════════╗
 // ║          KVM Switch Logic        ║
@@ -39,29 +26,21 @@ static queue_t kvm_switch_action_queue = {};
 
 void kvm_switch_init() {
     memset(&kvm_switch, 0, sizeof(kvm_switch));
-
-    for (int i = 0; i < MAX_COMPUTER; i++) {
-        kvm_switch.computers[i].computer_id = i;
-    }
-
-    queue_init(&kvm_switch_action_queue, sizeof(kvm_switch_action_t), 32);
+    queue_init(&kvm_switch.action_queue, sizeof(kvm_switch_action_t), 32);
 }
-
-uint64_t last_device_mounted = 0;
-uint8_t device_mounted_count = 0;
 
 static void kvm_switch_process_actions() {
     kvm_switch_action_t kvm_switch_action;
-    if (queue_try_remove(&kvm_switch_action_queue, &kvm_switch_action)) {
+    if (queue_try_remove(&kvm_switch.action_queue, &kvm_switch_action)) {
         switch (kvm_switch_action.opcode) {
             case KVM_SWITCH_OP_DEVICE_MOUNT: {
-                last_device_mounted = time_us_64();
-                device_mounted_count++;
+                kvm_switch.last_device_mounted = time_us_64();
+                kvm_switch.device_mounted_count++;
                 break;
             }
             case KVM_SWITCH_OP_DEVICE_UMOUNT: {
-                assert(device_mounted_count > 0);
-                device_mounted_count--;
+                assert(kvm_switch.device_mounted_count > 0);
+                kvm_switch.device_mounted_count--;
                 break;
             }
             case KVM_SWITCH_OP_HID_MOUNT: {
@@ -104,13 +83,7 @@ static void kvm_switch_process_actions() {
                                  data->dev_addr, data->host_hid_idx);
                     return;
                 }
-                if (!tud_hid_n_ready(hid->kvm_hid_idx)) {
-                    logf_warning("tud_hid_ready(%u) == false, skip report", hid->kvm_hid_idx);
-                    return;
-                }
-                if (!tud_hid_n_report(hid->kvm_hid_idx, data->report_id, data->report_data, data->report_data_len)) {
-                    log_error("tud_hid_n_report failed");
-                }
+                usb_device_send_report(hid->kvm_hid_idx, data->report_id, data->report_data, data->report_data_len);
                 break;
             }
             default:
@@ -122,13 +95,13 @@ static void kvm_switch_process_actions() {
 
 void kvm_switch_task() {
     kvm_switch_process_actions();
-    if (last_device_mounted) {
+    if (kvm_switch.last_device_mounted) {
         const uint64_t now = time_us_64();
         // When a device is mounted, wait 1 second before setting up the pico as a usb device.
         // This allow to avoid multiple re-initializations of the usb device each time.
         // When 2 devices are detected, skip the wait
-        if (device_mounted_count == 2 || now - last_device_mounted > 1'000'000) {
-            last_device_mounted = 0;
+        if (kvm_switch.device_mounted_count == 2 || now - kvm_switch.last_device_mounted > 1'000'000) {
+            kvm_switch.last_device_mounted = 0;
             usb_device_connect_to_computer();
         }
     }
@@ -142,8 +115,7 @@ void kvm_switch_computer_set_hid_protocol(
     assert(computer_id < MAX_COMPUTER);
     assert(kvm_hid_idx < CFG_TUH_HID);
 
-    computer_t *computer = &kvm_switch.computers[computer_id];
-    computer->hid_protocol_per_interface[kvm_hid_idx] = hid_protocol;
+    computer_manager_set_hid_protocol(computer_id, kvm_hid_idx, hid_protocol);
 
     if (kvm_switch.active_computer_id == computer_id) {
         usb_host_enqueue_set_protocol(kvm_hid_idx, hid_protocol);
@@ -161,52 +133,8 @@ void kvm_switch_computer_set_report(
     assert(computer_id < MAX_COMPUTER);
     assert(kvm_hid_idx < CFG_TUH_HID);
 
-    computer_t *computer = &kvm_switch.computers[computer_id];
-    computer_hid_report_t *saved_report = nullptr;
-
-    computer_hid_report_t *itr = computer->hid_reports_per_interface[kvm_hid_idx];
-    while (itr != nullptr) {
-        // FIXME: Should we check report_type?
-        if (itr->report_id == report_id) {
-            saved_report = itr;
-            break;
-        }
-        itr = itr->next;
-    }
-
-    if (saved_report == nullptr) {
-        saved_report = calloc(sizeof(computer_hid_report_t), 1);
-        if (saved_report == nullptr) {
-            log_critical("Failed to allocate memory for computer_hid_report_t");
-            return;
-        }
-        saved_report->report_id = report_id;
-        saved_report->report_type = report_type;
-        saved_report->report_data_len = report_data_len;
-        saved_report->report_data = malloc(report_data_len);
-        if (saved_report->report_data == nullptr) {
-            logf_critical("Failed to allocate memory for saved_report->report_data size: %u", report_data_len);
-            free(saved_report);
-            return;
-        }
-        memcpy(saved_report->report_data, report_data, report_data_len);
-        saved_report->next = computer->hid_reports_per_interface[kvm_hid_idx];
-        computer->hid_reports_per_interface[kvm_hid_idx] = saved_report;
-    } else {
-        if (saved_report->report_data_len < report_data_len) {
-            free(saved_report->report_data);
-            saved_report->report_data_len = report_data_len;
-            saved_report->report_data = malloc(report_data_len);
-            if (saved_report->report_data == nullptr) {
-                logf_critical("Failed to allocate memory for saved_report->report_data size: %u", report_data_len);
-                free(saved_report);
-                return;
-            }
-            memcpy(saved_report->report_data, report_data, report_data_len);
-        } else {
-            saved_report->report_data_len = report_data_len;
-            memcpy(saved_report->report_data, report_data, report_data_len);
-        }
+    if (!computer_manager_set_report(computer_id, kvm_hid_idx, report_id, report_type, report_data, report_data_len)) {
+        return;
     }
 
     if (kvm_switch.active_computer_id == computer_id) {
@@ -231,7 +159,7 @@ static bool kvm_switch_enqueue_action(
     };
     memcpy(action.data, data, data_len);
 
-    return queue_try_add(&kvm_switch_action_queue, &action);
+    return queue_try_add(&kvm_switch.action_queue, &action);
 }
 
 bool kvm_switch_enqueue_device_mount(

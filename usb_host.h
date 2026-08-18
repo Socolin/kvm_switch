@@ -43,7 +43,7 @@ typedef struct {
 
 /**
  * @param kvm_hid_idx The index of the HID interface in the KVM (Exposed to the computers)
- * @param hid_protocol /**< The HID protocol (boot / report) \see hid_protocol_mode_enum_t
+ * @param hid_protocol The HID protocol (boot / report) \see hid_protocol_mode_enum_t
  * @return
  *   - **true**: if the message was enqueued successfully
  *   - **false**: otherwise

@@ -2,6 +2,7 @@
 #include "pico/multicore.h"
 #include <string.h>
 
+#include "computer_manager.h"
 #include "hid_manager.h"
 #include "kvm_switch.h"
 #include "logger.h"
@@ -55,6 +56,9 @@ int main() {
     set_sys_clock_khz(120000, true);
 
     sleep_ms(10);
+
+    computer_manager_init();
+    computer_manager_configure_computer(1, 6, 7);
 
     hid_mgr_init();
     kvm_switch_init();

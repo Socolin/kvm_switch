@@ -52,6 +52,21 @@ void usb_device_connect_to_computer() {
     }
 }
 
+void usb_device_send_report(
+    const uint8_t kvm_hid_idx,
+    const uint8_t report_id,
+    const uint8_t* report_data,
+    const uint8_t report_data_len
+) {
+    if (!tud_hid_n_ready(kvm_hid_idx)) {
+        logf_warning("tud_hid_ready(%u) == false, skip report", kvm_hid_idx);
+        return;
+    }
+    if (!tud_hid_n_report(kvm_hid_idx, report_id, report_data, report_data_len)) {
+        log_error("tud_hid_n_report failed");
+    }
+}
+
 // ╔══════════════════════════════════╗
 // ║         tinyusb callbacks        ║
 // ╚══════════════════════════════════╝

@@ -33,6 +33,7 @@ add_executable(${target_name}
         usb_device.c
         kvm_switch.c
         usb_host.c
+        computer_manager.c
 )
 
 #[[
