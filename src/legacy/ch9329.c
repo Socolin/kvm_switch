@@ -1,11 +1,11 @@
-#include "ch9329.h"
+#include "../../ch9329.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <machine/endian.h>
 
-#include "debug.h"
+#include "../../debug.h"
 
 // ╔══════════════════════════════════╗
 // ║              Frame               ║

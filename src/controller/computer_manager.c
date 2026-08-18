@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "logger.h"
+#include "../shared/logger.h"
 
 typedef struct {
     computer_t computers[MAX_COMPUTER];

@@ -6,9 +6,10 @@
 #include "host/usbh.h"
 #include "pio_usb.h"
 #include "pio_usb_configuration.h"
+#include "tusb_config.h"
 
-#include "logger.h"
-#include "hid_manager.h"
+#include "../shared/logger.h"
+#include "../shared/hid_manager.h"
 #include "kvm_switch.h"
 
 static queue_t hid_action_queue = {};
@@ -232,7 +233,6 @@ void tuh_hid_umount_cb(
 
     logf_info("HID device unmounted. dev_addr: %u, host_hid_idx: %u", dev_addr, host_hid_idx);
 }
-
 
 void tuh_hid_report_received_cb(
     const uint8_t dev_addr,

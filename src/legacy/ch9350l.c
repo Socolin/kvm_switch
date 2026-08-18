@@ -1,6 +1,6 @@
 #include <string.h>
 
-#include "ch9350l.h"
+#include "../../ch9350l.h"
 
 #include <stdio.h>
 #include <stdlib.h>

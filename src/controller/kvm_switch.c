@@ -2,11 +2,13 @@
 
 #include <stdlib.h>
 
+#include "../shared/hid_manager.h"
+#include "../shared/logger.h"
+#include "../shared/usb_device.h"
+
 #include "computer_manager.h"
-#include "hid_manager.h"
-#include "logger.h"
-#include "usb_device.h"
 #include "usb_host.h"
+#include "class/hid/hid.h"
 #include "pico/bootrom.h"
 #include "pico/multicore.h"
 #include "pico/util/queue.h"
@@ -102,7 +104,7 @@ void kvm_switch_task() {
         // When 2 devices are detected, skip the wait
         if (kvm_switch.device_mounted_count == 2 || now - kvm_switch.last_device_mounted > 1'000'000) {
             kvm_switch.last_device_mounted = 0;
-            usb_device_connect_to_computer();
+            usb_device_connect_to_computer(BOARD_TUD_RHPORT);
         }
     }
 }

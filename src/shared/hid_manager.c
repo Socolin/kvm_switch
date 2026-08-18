@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "debug.h"
 #include "logger.h"
 #include "class/hid/hid.h"
 
@@ -14,7 +13,7 @@ typedef struct {
     hid_t hid[MAX_HID_COUNT];
 } hid_mgr_t;
 
-static hid_mgr_t hid_mgr = {0};
+static hid_mgr_t hid_mgr = {};
 
 void hid_mgr_init() {
     log_info("Initializing HID Manager");

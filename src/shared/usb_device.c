@@ -2,16 +2,18 @@
 
 #include "class/hid/hid.h"
 #include "class/hid/hid_device.h"
+#include "device/usbd.h"
+#include "bsp/board_api.h"
 
 #include "logger.h"
 #include "hid_manager.h"
-#include "kvm_switch.h"
-#include "bsp/board_api.h"
 
 typedef struct {
     uint8_t computer_id;
     uint16_t vid;
     uint16_t pid;
+    set_report_cb_t set_computer_report_cb;
+    set_hid_protocol_cb_t set_computer_hid_protocol_cb;
 } usb_device_t;
 
 static usb_device_t usb_device;
@@ -23,21 +25,27 @@ static usb_device_t usb_device;
 void usb_device_init(
     const uint8_t computer_id,
     const uint16_t vid,
-    const uint16_t pid
+    const uint16_t pid,
+    const set_report_cb_t set_report_cb,
+    const set_hid_protocol_cb_t set_hid_protocol_cb
 ) {
     usb_device.computer_id = computer_id;
     usb_device.vid = vid;
     usb_device.pid = pid;
+    usb_device.set_computer_report_cb = set_report_cb;
+    usb_device.set_computer_hid_protocol_cb = set_hid_protocol_cb;
 }
 
 void usb_device_task() {
     tud_task(); // tinyusb device task
 }
 
-void usb_device_connect_to_computer() {
+void usb_device_connect_to_computer(
+    const uint8_t rhport
+) {
     if (tud_inited()) {
         log_info("Re-initializing USB device");
-        tud_deinit(BOARD_TUD_RHPORT);
+        tud_deinit(rhport);
     } else {
         log_info("Initializing USB device");
     }
@@ -47,7 +55,7 @@ void usb_device_connect_to_computer() {
         .role = TUSB_ROLE_DEVICE,
         .speed = TUD_OPT_HIGH_SPEED ? TUSB_SPEED_HIGH : TUSB_SPEED_FULL
     };
-    if (!tud_rhport_init(BOARD_TUD_RHPORT, &rh_init)) {
+    if (!tud_rhport_init(rhport, &rh_init)) {
         log_error("Failed to initialize USB device");
     }
 }
@@ -330,7 +338,7 @@ void tud_mount_cb() {
         const uint8_t hid_protocol = tud_hid_n_get_protocol(kvm_hid_idx);
         logf_debug("HID protocol for device: %u interface: %u is: %u", hid->dev_addr, hid->host_hid_idx, hid_protocol);
 
-        kvm_switch_computer_set_hid_protocol(usb_device.computer_id, kvm_hid_idx, hid_protocol);
+        usb_device.set_computer_hid_protocol_cb(usb_device.computer_id, kvm_hid_idx, hid_protocol);
     }
 }
 
@@ -373,8 +381,7 @@ void tud_hid_set_report_cb(
     logf_debug("kvm_hid_idx: %u, report_id: %u, report_type: %u", kvm_hid_idx, report_id, report_type);
     log_debug_hex_buffer(report_data, report_data_len);
 
-    kvm_switch_computer_set_report(usb_device.computer_id, kvm_hid_idx, report_id, report_type, report_data,
-                                   report_data_len);
+    usb_device.set_computer_report_cb(usb_device.computer_id, kvm_hid_idx, report_id, report_type, report_data, report_data_len);
 }
 
 /**
@@ -388,5 +395,5 @@ void tud_hid_set_protocol_cb(
 ) {
     logf_debug("kvm_hid_idx:%u hid_protocol:%u", kvm_hid_idx, hid_protocol);
 
-    kvm_switch_computer_set_hid_protocol(usb_device.computer_id, kvm_hid_idx, hid_protocol);
+    usb_device.set_computer_hid_protocol_cb(usb_device.computer_id, kvm_hid_idx, hid_protocol);
 }
