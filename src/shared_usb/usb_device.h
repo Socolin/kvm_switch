@@ -3,7 +3,6 @@
 #include <stdint.h>
 
 typedef void (*set_report_cb_t)(
-    uint8_t computer_id,
     uint8_t kvm_hid_idx,
     uint8_t report_id,
     uint8_t report_type,
@@ -12,13 +11,11 @@ typedef void (*set_report_cb_t)(
 );
 
 typedef void (*set_hid_protocol_cb_t)(
-    uint8_t computer_id,
     uint8_t kvm_hid_idx,
     uint8_t hid_protocol
 );
 
 void usb_device_init(
-    uint8_t computer_id,
     uint16_t vid,
     uint16_t pid,
     set_report_cb_t set_report_cb,

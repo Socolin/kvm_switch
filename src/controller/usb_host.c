@@ -10,12 +10,19 @@
 
 #include "../shared/logger.h"
 #include "../shared/hid_manager.h"
-#include "kvm_switch.h"
+#include "kvm_switch_controller.h"
 
-static queue_t hid_action_queue = {};
+typedef struct {
+    queue_t action_queue;
+    // When an action is already in progress, we cannot process any other actions
+    bool should_process_actions;
+} usb_host_t;
+
+static usb_host_t usb_host = {};
 
 void usb_host_init() {
-    queue_init(&hid_action_queue, sizeof(hid_action_t), 32);
+    queue_init(&usb_host.action_queue, sizeof(hid_action_t), 32);
+    usb_host.should_process_actions = true;
 
     const pio_usb_configuration_t pio_cfg = {
         .pin_dp = 16,
@@ -35,21 +42,19 @@ void usb_host_init() {
     pio_usb_host_add_port(18, PIO_USB_PINOUT_DPDM);
 }
 
-// When an action is already in progress, we cannot process any other actions
-static bool should_process_actions = true;
 
 static void usb_host_process_action() {
-    if (!should_process_actions)
+    if (!usb_host.should_process_actions)
         return;
 
     hid_action_t hid_action;
-    if (!queue_try_peek(&hid_action_queue, &hid_action))
+    if (!queue_try_peek(&usb_host.action_queue, &hid_action))
         return; // Nothing to do
 
     switch (hid_action.opcode) {
         case HID_SET_REPORT: {
             hid_action_set_report_t *data = (hid_action_set_report_t *) hid_action.data;
-            should_process_actions = false;
+            usb_host.should_process_actions = false;
             if (!tuh_hid_set_report(
                 data->dev_addr,
                 data->host_hid_idx,
@@ -69,7 +74,7 @@ static void usb_host_process_action() {
             const hid_action_set_protocol_t *data = (hid_action_set_protocol_t *) hid_action.data;
             if (tuh_hid_get_protocol(data->dev_addr, data->host_hid_idx) == data->hid_protocol)
                 break;
-            should_process_actions = false;
+            usb_host.should_process_actions = false;
             if (!tuh_hid_set_protocol(data->dev_addr, data->host_hid_idx, data->hid_protocol)) {
                 logf_error("Failed to set HID protocol for device %u interface %u to %u", data->dev_addr,
                            data->host_hid_idx, data->hid_protocol);
@@ -82,7 +87,7 @@ static void usb_host_process_action() {
             break;
     }
 
-    queue_try_remove(&hid_action_queue, nullptr);
+    queue_try_remove(&usb_host.action_queue, nullptr);
 }
 
 void usb_host_task() {
@@ -105,7 +110,7 @@ static bool usb_host_enqueue_hid_action(
         .data_len = data_len,
     };
     memcpy(action.data, data, data_len);
-    return queue_try_add(&hid_action_queue, &action);
+    return queue_try_add(&usb_host.action_queue, &action);
 }
 
 bool usb_host_enqueue_set_protocol(
@@ -163,7 +168,7 @@ void tuh_mount_cb(
 ) {
     logf_debug("dev_addr: %u", dev_addr);
 
-    kvm_switch_enqueue_device_mount(dev_addr);
+    kvm_switch_controller_enqueue_device_mount(dev_addr);
 
     logf_info("Device %u is mounted", dev_addr);
 }
@@ -173,7 +178,7 @@ void tuh_umount_cb(
 ) {
     logf_debug("dev_addr: %u", dev_addr);
 
-    kvm_switch_enqueue_device_umount(dev_addr);
+    kvm_switch_controller_enqueue_device_umount(dev_addr);
 
     logf_info("Device %u is unmounted", dev_addr);
 }
@@ -194,7 +199,7 @@ void tuh_hid_mount_cb(
     }
 
     const uint8_t itf_protocol = tuh_hid_interface_protocol(dev_addr, host_hid_idx);
-    kvm_switch_enqueue_hid_mount(dev_addr, host_hid_idx, itf_protocol, pid, vid, report_desc, desc_len);
+    kvm_switch_controller_enqueue_hid_mount(dev_addr, host_hid_idx, itf_protocol, pid, vid, report_desc, desc_len);
 
     if (!tuh_hid_receive_report(dev_addr, host_hid_idx)) {
         log_error("tuh_hid_receive_report failed");
@@ -210,7 +215,7 @@ void tuh_hid_set_report_complete_cb(
 ) {
     logf_debug("dev_addr: %u, host_hid_idx: %u, report_id: %u, report_type: %u len: %u",
                dev_addr, host_hid_idx, report_id, report_type, len);
-    should_process_actions = true;
+    usb_host.should_process_actions = true;
 }
 
 void tuh_hid_set_protocol_complete_cb(
@@ -220,7 +225,7 @@ void tuh_hid_set_protocol_complete_cb(
 ) {
     logf_debug("dev_addr: %u, host_hid_idx: %u, protocol: %u",
                dev_addr, host_hid_idx, protocol);
-    should_process_actions = true;
+    usb_host.should_process_actions = true;
 }
 
 void tuh_hid_umount_cb(
@@ -229,7 +234,7 @@ void tuh_hid_umount_cb(
 ) {
     logf_debug("dev_addr: %u, host_hid_idx: %u", dev_addr, host_hid_idx);
 
-    kvm_switch_enqueue_hid_umount(dev_addr, host_hid_idx);
+    kvm_switch_controller_enqueue_hid_umount(dev_addr, host_hid_idx);
 
     logf_info("HID device unmounted. dev_addr: %u, host_hid_idx: %u", dev_addr, host_hid_idx);
 }
@@ -251,7 +256,7 @@ void tuh_hid_report_received_cb(
     uint8_t const itf_protocol = tuh_hid_interface_protocol(dev_addr, host_hid_idx);
     const uint8_t hid_protocol = tuh_hid_get_protocol(dev_addr, host_hid_idx);
 
-    kvm_switch_enqueue_report(dev_addr, host_hid_idx, itf_protocol, hid_protocol, report, len);
+    kvm_switch_controller_enqueue_report(dev_addr, host_hid_idx, itf_protocol, hid_protocol, report, len);
 
     if (!tuh_hid_receive_report(dev_addr, host_hid_idx)) {
         log_error("tuh_hid_receive_report failed");

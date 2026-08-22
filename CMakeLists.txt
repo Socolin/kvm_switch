@@ -15,5 +15,6 @@ add_compile_definitions(BUILD_DATE="${BUILD_DATE}")
 
 add_subdirectory("./Pico-PIO-USB" pico_pio_usb)
 
+add_subdirectory(src/shared)
 add_subdirectory(src/controller)
 add_subdirectory(src/node)

@@ -21,16 +21,18 @@ typedef struct {
     uint8_t computer_id;
     uint8_t hid_protocol_per_interface[CFG_TUH_HID]; // BOOT / REPORT
     computer_hid_report_t *hid_reports_per_interface[CFG_TUH_HID];
-    uint8_t spi_selector_gpio_pin;
-    uint8_t data_available_gpio_pin;
+    uint8_t spi_selector_gpio;
+    uint8_t spi_ready_gpio;
+    uint8_t data_available_gpio;
 } computer_t;
 
 void computer_manager_init();
 
 void computer_manager_configure_computer(
     uint8_t computer_id,
-    uint8_t spi_selector_gpio_pin,
-    uint8_t data_available_gpio_pin
+    uint8_t spi_selector_gpio,
+    uint8_t spi_ready_gpio,
+    uint8_t data_available_gpio
 );
 
 void computer_manager_set_hid_protocol(

@@ -4,12 +4,12 @@
 
 #include "computer_manager.h"
 #include "../shared/hid_manager.h"
-#include "kvm_switch.h"
+#include "kvm_switch_controller.h"
 #include "../shared/logger.h"
 #include "bsp/board_api.h"
 #include "hardware/clocks.h"
 #include "hardware/watchdog.h"
-#include "../shared/usb_device.h"
+#include "../shared_usb/usb_device.h"
 #include "usb_host.h"
 #include "pico/bootrom.h"
 
@@ -60,6 +60,23 @@ static void core1_main() {
     }
 }
 
+static void on_usb_device_set_report(
+    const uint8_t kvm_hid_idx,
+    const uint8_t report_id,
+    const uint8_t report_type,
+    uint8_t const *report_data,
+    const uint16_t report_data_len
+) {
+    kvm_switch_controller_computer_set_report(0, kvm_hid_idx, report_id, report_type, report_data, report_data_len);
+}
+
+static void on_usb_device_set_hid_protocol(
+    const uint8_t kvm_hid_idx,
+    const uint8_t hid_protocol
+) {
+    kvm_switch_controller_computer_set_hid_protocol(0, kvm_hid_idx, hid_protocol);
+}
+
 int main() {
     watchdog_enable(5000, 1);
 
@@ -77,21 +94,21 @@ int main() {
     // of the core frequency if it's not a multiple of 12MHz, some cycle will be longer or shorter and it will
     // create error when writing / reading usb.
     // FIXME: Can we update this for pico 2 ? like 144000
+    // FIXME: This can only works for pico 2 now, so add check
     set_sys_clock_khz(120000, true);
 
     sleep_ms(10);
 
     computer_manager_init();
-    computer_manager_configure_computer(1, 6, 7);
+    computer_manager_configure_computer(1, 6, 7, 8);
 
     hid_mgr_init();
-    kvm_switch_init();
+    kvm_switch_controller_init();
     usb_device_init(
-        0,
         USB_VID,
         USB_PID,
-        kvm_switch_computer_set_report,
-        kvm_switch_computer_set_hid_protocol
+        on_usb_device_set_report,
+        on_usb_device_set_hid_protocol
     );
 
     log_info("Initializing board");
@@ -107,7 +124,7 @@ int main() {
 
     while (true) {
         usb_device_task();
-        kvm_switch_task();
+        kvm_switch_controller_task();
         watchdog_update();
     }
 }

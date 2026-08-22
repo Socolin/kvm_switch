@@ -3,16 +3,14 @@ add_executable(kvm_controller
         ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
         ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
 
-        ../shared/hid_manager.c
-        ../shared/logger.c
-        ../shared/usb_device.c
-
         main.c
         computer_manager.c
         extension_host.c
-        kvm_switch.c
+        kvm_switch_controller.c
         usb_host.c
+        ../shared_usb/usb_device.c
 )
+target_link_options(kvm_controller PUBLIC -Wl,--print-memory-usage)
 
 pico_enable_stdio_uart(kvm_controller 1)
 
@@ -23,6 +21,7 @@ target_compile_definitions(kvm_controller PRIVATE PIO_USB_USE_TINYUSB)
 
 # Link the standard library (gpio, timers, sleep_ms, etc.)
 target_link_libraries(kvm_controller
+        shared
         pico_stdlib
         pico_multicore
         pico_pio_usb

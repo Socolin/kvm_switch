@@ -18,18 +18,20 @@ void computer_manager_init() {
         computer_manager.computers[i].computer_id = i;
     }
     // Computer 0 is the local one
-    computer_manager_configure_computer(0, -1, -1);
+    computer_manager_configure_computer(0, -1, -1, -1);
 }
 
 void computer_manager_configure_computer(
     const uint8_t computer_id,
-    const uint8_t spi_selector_gpio_pin,
-    const uint8_t data_available_gpio_pin
+    const uint8_t spi_selector_gpio,
+    const uint8_t spi_ready_gpio,
+    const uint8_t data_available_gpio
 ) {
     assert(computer_id < MAX_COMPUTER);
     computer_t *computer = &computer_manager.computers[computer_id];
-    computer->spi_selector_gpio_pin = spi_selector_gpio_pin;
-    computer->data_available_gpio_pin = data_available_gpio_pin;
+    computer->spi_selector_gpio = spi_selector_gpio;
+    computer->spi_ready_gpio = spi_ready_gpio;
+    computer->data_available_gpio = data_available_gpio;
 }
 
 void computer_manager_set_hid_protocol(

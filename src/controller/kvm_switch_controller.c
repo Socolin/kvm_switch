@@ -1,10 +1,10 @@
-#include "kvm_switch.h"
+#include "kvm_switch_controller.h"
 
 #include <stdlib.h>
 
 #include "../shared/hid_manager.h"
 #include "../shared/logger.h"
-#include "../shared/usb_device.h"
+#include "../shared_usb/usb_device.h"
 
 #include "computer_manager.h"
 #include "usb_host.h"
@@ -26,7 +26,7 @@ static kvm_switch_t kvm_switch = {};
 // ║          KVM Switch Logic        ║
 // ╚══════════════════════════════════╝
 
-void kvm_switch_init() {
+void kvm_switch_controller_init() {
     memset(&kvm_switch, 0, sizeof(kvm_switch));
     queue_init(&kvm_switch.action_queue, sizeof(kvm_switch_action_t), 32);
 }
@@ -35,18 +35,18 @@ static void kvm_switch_process_actions() {
     kvm_switch_action_t kvm_switch_action;
     if (queue_try_remove(&kvm_switch.action_queue, &kvm_switch_action)) {
         switch (kvm_switch_action.opcode) {
-            case KVM_SWITCH_OP_DEVICE_MOUNT: {
+            case KVM_SWITCH_CONTROLLER_OP_DEVICE_MOUNT: {
                 kvm_switch.last_device_mounted = time_us_64();
                 kvm_switch.device_mounted_count++;
                 break;
             }
-            case KVM_SWITCH_OP_DEVICE_UMOUNT: {
+            case KVM_SWITCH_CONTROLLER_OP_DEVICE_UMOUNT: {
                 assert(kvm_switch.device_mounted_count > 0);
                 kvm_switch.device_mounted_count--;
                 break;
             }
-            case KVM_SWITCH_OP_HID_MOUNT: {
-                const kvm_switch_action_hid_mount_data_t *data = (kvm_switch_action_hid_mount_data_t *)
+            case KVM_SWITCH_CONTROLLER_OP_HID_MOUNT: {
+                const kvm_switch_controller_action_hid_mount_data_t *data = (kvm_switch_controller_action_hid_mount_data_t *)
                         kvm_switch_action.
                         data;
                 if (!hid_mgr_register_hid(
@@ -60,15 +60,15 @@ static void kvm_switch_process_actions() {
                 }
                 break;
             }
-            case KVM_SWITCH_OP_HID_UMOUNT: {
-                const kvm_switch_action_hid_umount_data_t *data = (kvm_switch_action_hid_umount_data_t *)
+            case KVM_SWITCH_CONTROLLER_OP_HID_UMOUNT: {
+                const kvm_switch_controller_action_hid_umount_data_t *data = (kvm_switch_controller_action_hid_umount_data_t *)
                         kvm_switch_action.
                         data;
                 hid_mgr_unregister_hid(data->dev_addr, data->host_hid_idx);
                 break;
             }
-            case KVM_SWITCH_OP_HID_REPORT: {
-                const kvm_switch_action_hid_report_data_t *data = (kvm_switch_action_hid_report_data_t *)
+            case KVM_SWITCH_CONTROLLER_OP_HID_REPORT: {
+                const kvm_switch_controller_action_hid_report_data_t *data = (kvm_switch_controller_action_hid_report_data_t *)
                         kvm_switch_action.
                         data;
                 // FIXME: make this configurable
@@ -95,7 +95,7 @@ static void kvm_switch_process_actions() {
     }
 }
 
-void kvm_switch_task() {
+void kvm_switch_controller_task() {
     kvm_switch_process_actions();
     if (kvm_switch.last_device_mounted) {
         const uint64_t now = time_us_64();
@@ -109,7 +109,7 @@ void kvm_switch_task() {
     }
 }
 
-void kvm_switch_computer_set_hid_protocol(
+void kvm_switch_controller_computer_set_hid_protocol(
     const uint8_t computer_id,
     const uint8_t kvm_hid_idx,
     const uint8_t hid_protocol
@@ -124,7 +124,7 @@ void kvm_switch_computer_set_hid_protocol(
     }
 }
 
-void kvm_switch_computer_set_report(
+void kvm_switch_controller_computer_set_report(
     const uint8_t computer_id,
     const uint8_t kvm_hid_idx,
     const uint8_t report_id,
@@ -149,7 +149,7 @@ void kvm_switch_computer_set_report(
 // ╚══════════════════════════════════╝
 
 static bool kvm_switch_enqueue_action(
-    const kvm_switch_action_opcode_t opcode,
+    const kvm_switch_controller_action_opcode_t opcode,
     const void *data,
     const size_t data_len
 
@@ -164,27 +164,27 @@ static bool kvm_switch_enqueue_action(
     return queue_try_add(&kvm_switch.action_queue, &action);
 }
 
-bool kvm_switch_enqueue_device_mount(
+bool kvm_switch_controller_enqueue_device_mount(
     const uint8_t dev_addr
 ) {
-    const kvm_switch_action_device_mount_data_t action_data = {
+    const kvm_switch_controller_action_device_mount_data_t action_data = {
         .dev_addr = dev_addr,
     };
 
-    return kvm_switch_enqueue_action(KVM_SWITCH_OP_DEVICE_MOUNT, &action_data, sizeof(action_data));
+    return kvm_switch_enqueue_action(KVM_SWITCH_CONTROLLER_OP_DEVICE_MOUNT, &action_data, sizeof(action_data));
 }
 
-bool kvm_switch_enqueue_device_umount(
+bool kvm_switch_controller_enqueue_device_umount(
     const uint8_t dev_addr
 ) {
-    const kvm_switch_action_device_umount_data_t action_data = {
+    const kvm_switch_controller_action_device_umount_data_t action_data = {
         .dev_addr = dev_addr,
     };
 
-    return kvm_switch_enqueue_action(KVM_SWITCH_OP_DEVICE_UMOUNT, &action_data, sizeof(action_data));
+    return kvm_switch_enqueue_action(KVM_SWITCH_CONTROLLER_OP_DEVICE_UMOUNT, &action_data, sizeof(action_data));
 }
 
-bool kvm_switch_enqueue_hid_mount(
+bool kvm_switch_controller_enqueue_hid_mount(
     const uint8_t dev_addr,
     const uint8_t host_hid_idx,
     const uint8_t interface_protocol,
@@ -200,7 +200,7 @@ bool kvm_switch_enqueue_hid_mount(
     }
 
     memcpy(data_report_desc, report_desc, desc_len);
-    const kvm_switch_action_hid_mount_data_t action_data = {
+    const kvm_switch_controller_action_hid_mount_data_t action_data = {
         .dev_addr = dev_addr,
         .host_hid_idx = host_hid_idx,
         .itf_protocol = interface_protocol,
@@ -210,21 +210,21 @@ bool kvm_switch_enqueue_hid_mount(
         .vid = vid,
     };
 
-    return kvm_switch_enqueue_action(KVM_SWITCH_OP_HID_MOUNT, &action_data, sizeof(action_data));
+    return kvm_switch_enqueue_action(KVM_SWITCH_CONTROLLER_OP_HID_MOUNT, &action_data, sizeof(action_data));
 }
 
-bool kvm_switch_enqueue_hid_umount(
+bool kvm_switch_controller_enqueue_hid_umount(
     const uint8_t dev_addr,
     const uint8_t host_hid_idx
 ) {
-    const kvm_switch_action_hid_umount_data_t action_data = {
+    const kvm_switch_controller_action_hid_umount_data_t action_data = {
         .dev_addr = dev_addr,
         .host_hid_idx = host_hid_idx,
     };
-    return kvm_switch_enqueue_action(KVM_SWITCH_OP_HID_UMOUNT, &action_data, sizeof(action_data));
+    return kvm_switch_enqueue_action(KVM_SWITCH_CONTROLLER_OP_HID_UMOUNT, &action_data, sizeof(action_data));
 }
 
-bool kvm_switch_enqueue_report(
+bool kvm_switch_controller_enqueue_report(
     const uint8_t dev_addr,
     const uint8_t host_hid_idx,
     const uint8_t itf_protocol,
@@ -242,7 +242,7 @@ bool kvm_switch_enqueue_report(
     // a report_id, then the report_id is the first byte of the report and need to be extracted.
     const bool use_report_id = hid_protocol == HID_PROTOCOL_REPORT && hid->use_report_id;
 
-    kvm_switch_action_hid_report_data_t action_data = {
+    kvm_switch_controller_action_hid_report_data_t action_data = {
         .dev_addr = dev_addr,
         .host_hid_idx = host_hid_idx,
         .report_data_len = use_report_id ? report_len - 1 : report_len,
@@ -261,5 +261,5 @@ bool kvm_switch_enqueue_report(
         action_data.report_data_len
     );
 
-    return kvm_switch_enqueue_action(KVM_SWITCH_OP_HID_REPORT, &action_data, sizeof(action_data));
+    return kvm_switch_enqueue_action(KVM_SWITCH_CONTROLLER_OP_HID_REPORT, &action_data, sizeof(action_data));
 }

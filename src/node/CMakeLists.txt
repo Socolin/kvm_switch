@@ -3,12 +3,10 @@ add_executable(kvm_node
         ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
         ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
 
-        ../shared/hid_manager.c
-        ../shared/logger.c
-        ../shared/usb_device.c
-
         main.c
+        kvm_switch_node.c
         extension_node.c
+        ../shared_usb/usb_device.c
 )
 
 pico_enable_stdio_uart(kvm_node 1)
@@ -20,10 +18,14 @@ target_compile_definitions(kvm_node PRIVATE PIO_USB_USE_TINYUSB)
 
 # Link the standard library (gpio, timers, sleep_ms, etc.)
 target_link_libraries(kvm_node
+        shared
         pico_stdlib
         pico_multicore
+        hardware_spi
         tinyusb_device
         tinyusb_board)
+
+target_link_options(kvm_node PUBLIC -Wl,--print-memory-usage)
 
 # Produce the .uf2 (plus .elf, .bin, map file)
 pico_add_extra_outputs(kvm_node)

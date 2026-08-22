@@ -1,13 +1,11 @@
 #include "hid_manager.h"
 
-#define MAX_HID_COUNT CFG_TUH_HID
+#define MAX_HID_COUNT 8
 
 #include <stdlib.h>
 #include <string.h>
 
 #include "logger.h"
-#include "class/hid/hid.h"
-
 
 typedef struct {
     hid_t hid[MAX_HID_COUNT];
@@ -72,7 +70,7 @@ static bool is_report_id_present_in_descriptor(
         if (i + data_size > desc_len)
             return false;
 
-        if (type == RI_TYPE_GLOBAL && tag == RI_GLOBAL_REPORT_ID) {
+        if (type == 1 /*RI_TYPE_GLOBAL*/ && tag == 8 /*RI_GLOBAL_REPORT_ID*/) {
             return true;
         }
     }
