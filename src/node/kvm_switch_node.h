@@ -51,10 +51,56 @@ typedef struct {
     size_t data_len;
 } kvm_switch_action_t;
 
-void kvm_switch_node_enqueue_hid_mount();
+typedef struct __attribute__((packed)) {
+    const uint8_t dev_addr; /**< Device address (Which port the device is connected. Values: 1, 2) */
+    const uint8_t host_hid_idx; /**< HID interface index on USB Host side (Where the keyboard / mouse are connected) */
+    const uint8_t kvm_hid_idx; /**< The index of the HID interface in the KVM (Exposed to the computers) */
+    const uint8_t itf_protocol; /**< Interface protocol \see hid_interface_protocol_enum_t */
+    const uint16_t vid; /**< The USB vendor id */
+    const uint16_t pid; /**< The USB product id */
+    uint8_t *const report_desc;
+    /**< HID report descriptor. (malloced, need to be freed by consumer). \see hid1_11.pdf */
+    const uint16_t desc_len; /**< HID report descriptor length */
+} kvm_switch_node_action_hid_mount_data_t;
 
-void kvm_switch_node_enqueue_hid_umount();
+typedef struct __attribute__((packed)) {
+    const uint8_t dev_addr; /**< Device address (Which port the device is connected. Values: 1, 2) */
+    const uint8_t host_hid_idx; /**< HID interface index on USB Host side (Where the keyboard / mouse are connected) */
+} kvm_switch_node_action_hid_umount_data_t;
 
-void kvm_switch_node_enqueue_hid_report();
+typedef struct __attribute__((packed)) {
+    const uint8_t kvm_hid_idx;
+    const uint8_t report_id;
+    const uint16_t report_data_len;
+    uint8_t report_data[96];
+} kvm_switch_node_action_hid_report_data_t;
+
+typedef struct __attribute__((packed)) {
+    const uint16_t vid;
+    const uint16_t pid;
+} kvm_switch_node_action_connect_usb_device_data_t;
+
+void kvm_switch_node_enqueue_hid_mount(
+    uint8_t dev_addr,
+    uint8_t host_hid_idx,
+    uint8_t kvm_hid_idx,
+    uint8_t itf_protocol,
+    uint16_t vid,
+    uint16_t pid,
+    uint8_t *report_desc,
+    uint16_t report_desc_len
+);
+
+void kvm_switch_node_enqueue_hid_umount(
+    uint8_t dev_addr,
+    uint8_t host_hid_idx
+);
+
+void kvm_switch_node_enqueue_hid_report(
+    uint8_t kvm_hid_idx,
+    uint8_t report_id,
+    uint16_t report_data_len,
+    const uint8_t *report_data
+);
 
 void kvm_switch_node_enqueue_connect_usb_device();

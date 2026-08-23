@@ -5,6 +5,7 @@
 #include <string.h>
 #include <machine/endian.h>
 
+#include "kvm_switch_node.h"
 #include "../shared/crc.h"
 #include "../shared/utils.h"
 #include "../shared/extension_messages.h"
@@ -99,6 +100,57 @@ static bool extension_node_process_received_message(
 
     log_debug_hex_buffer(node.rx_buffer, rx_transport_header->message_len);
 
+    const extension_message_header_t *rx_message_header = (extension_message_header_t *) node.rx_buffer;
+    const uint8_t *data_start = node.rx_buffer + sizeof(extension_message_header_t);
+    const uint8_t *extra_data_start = data_start + rx_message_header->data_len;
+
+    switch (rx_message_header->opcode) {
+        case EXTENSION_HOST_MESSAGE_OP_HID_MOUNT: {
+            const extension_message_hid_mount_data_t *message_data = (extension_message_hid_mount_data_t *) data_start;
+            const uint16_t report_desc_len = *extra_data_start;
+            uint8_t *report_desc = malloc(report_desc_len);
+            if (report_desc == nullptr) {
+                log_critical("failed to allocate memory for report descriptor");
+            }
+            memcpy(report_desc, extra_data_start + sizeof(uint16_t), report_desc_len);
+
+            kvm_switch_node_enqueue_hid_mount(
+                message_data->dev_addr,
+                message_data->host_hid_idx,
+                message_data->kvm_hid_idx,
+                message_data->itf_protocol,
+                message_data->vid,
+                message_data->pid,
+                report_desc,
+                report_desc_len
+            );
+            break;
+        }
+        case EXTENSION_HOST_MESSAGE_OP_HID_UMOUNT: {
+            const extension_message_hid_umount_data_t *message_data = (extension_message_hid_umount_data_t *)
+                    data_start;
+            kvm_switch_node_enqueue_hid_umount(message_data->dev_addr, message_data->host_hid_idx);
+            break;
+        }
+        case EXTENSION_HOST_MESSAGE_OP_HID_REPORT: {
+            const extension_message_hid_report_data_t *message_data = (extension_message_hid_report_data_t *)
+                    data_start;
+            kvm_switch_node_enqueue_hid_report(
+                message_data->kvm_hid_idx,
+                message_data->report_id,
+                message_data->report_data_len,
+                message_data->report_data
+            );
+            break;
+        }
+        case EXTENSION_HOST_MESSAGE_OP_START_USB_DEVICE: {
+            kvm_switch_node_enqueue_connect_usb_device();
+            break;
+        }
+        default:
+            logf_error("invalid opcode: %04x", rx_message_header->opcode);
+            return false;
+    }
     // FIXME: enqueue packet to kvm_node
     return true;
 }

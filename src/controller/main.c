@@ -17,13 +17,6 @@
 #define BUILD_DATE "No date"
 #endif
 
-// https://pid.codes/pids/
-// FIXME: Request PID when needed. Also evaluate possibility to make this configurable to allow to easily change it to
-// avoid hid caching issue on windows.
-#define USB_PID   0x50C0
-#define USB_VID   0x1209
-
-
 #define QUICK_RESET_GPIO 28
 
 static void irq_handler(

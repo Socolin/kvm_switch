@@ -16,8 +16,6 @@ typedef void (*set_hid_protocol_cb_t)(
 );
 
 void usb_device_init(
-    uint16_t vid,
-    uint16_t pid,
     set_report_cb_t set_report_cb,
     set_hid_protocol_cb_t set_hid_protocol_cb
 );
@@ -25,7 +23,9 @@ void usb_device_init(
 void usb_device_task();
 
 void usb_device_connect_to_computer(
-    uint8_t rhport
+    uint8_t rhport,
+    uint16_t vid,
+    uint16_t pid
 );
 
 void usb_device_send_report(

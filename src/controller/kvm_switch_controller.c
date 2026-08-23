@@ -13,6 +13,12 @@
 #include "pico/multicore.h"
 #include "pico/util/queue.h"
 
+// https://pid.codes/pids/
+// FIXME: Request PID when needed. Also evaluate possibility to make this configurable to allow to easily change it to
+// avoid hid caching issue on windows.
+#define USB_VID   0x1209
+#define USB_PID   0x50C0
+
 typedef struct {
     uint8_t active_computer_id;
     uint64_t last_device_mounted;
@@ -104,7 +110,7 @@ void kvm_switch_controller_task() {
         // When 2 devices are detected, skip the wait
         if (kvm_switch.device_mounted_count == 2 || now - kvm_switch.last_device_mounted > 1'000'000) {
             kvm_switch.last_device_mounted = 0;
-            usb_device_connect_to_computer(BOARD_TUD_RHPORT);
+            usb_device_connect_to_computer(BOARD_TUD_RHPORT, USB_VID, USB_PID);
         }
     }
 }
@@ -148,7 +154,7 @@ void kvm_switch_controller_computer_set_report(
 // ║         KVM switch Action        ║
 // ╚══════════════════════════════════╝
 
-static bool kvm_switch_enqueue_action(
+static bool kvm_switch_node_enqueue_action(
     const kvm_switch_controller_action_opcode_t opcode,
     const void *data,
     const size_t data_len
@@ -171,7 +177,7 @@ bool kvm_switch_controller_enqueue_device_mount(
         .dev_addr = dev_addr,
     };
 
-    return kvm_switch_enqueue_action(KVM_SWITCH_CONTROLLER_OP_DEVICE_MOUNT, &action_data, sizeof(action_data));
+    return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_DEVICE_MOUNT, &action_data, sizeof(action_data));
 }
 
 bool kvm_switch_controller_enqueue_device_umount(
@@ -181,13 +187,13 @@ bool kvm_switch_controller_enqueue_device_umount(
         .dev_addr = dev_addr,
     };
 
-    return kvm_switch_enqueue_action(KVM_SWITCH_CONTROLLER_OP_DEVICE_UMOUNT, &action_data, sizeof(action_data));
+    return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_DEVICE_UMOUNT, &action_data, sizeof(action_data));
 }
 
 bool kvm_switch_controller_enqueue_hid_mount(
     const uint8_t dev_addr,
     const uint8_t host_hid_idx,
-    const uint8_t interface_protocol,
+    const uint8_t itf_protocol,
     const uint16_t pid,
     const uint16_t vid,
     const uint8_t *report_desc,
@@ -203,14 +209,14 @@ bool kvm_switch_controller_enqueue_hid_mount(
     const kvm_switch_controller_action_hid_mount_data_t action_data = {
         .dev_addr = dev_addr,
         .host_hid_idx = host_hid_idx,
-        .itf_protocol = interface_protocol,
+        .itf_protocol = itf_protocol,
         .report_desc = data_report_desc,
         .desc_len = desc_len,
         .pid = pid,
         .vid = vid,
     };
 
-    return kvm_switch_enqueue_action(KVM_SWITCH_CONTROLLER_OP_HID_MOUNT, &action_data, sizeof(action_data));
+    return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_HID_MOUNT, &action_data, sizeof(action_data));
 }
 
 bool kvm_switch_controller_enqueue_hid_umount(
@@ -221,7 +227,7 @@ bool kvm_switch_controller_enqueue_hid_umount(
         .dev_addr = dev_addr,
         .host_hid_idx = host_hid_idx,
     };
-    return kvm_switch_enqueue_action(KVM_SWITCH_CONTROLLER_OP_HID_UMOUNT, &action_data, sizeof(action_data));
+    return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_HID_UMOUNT, &action_data, sizeof(action_data));
 }
 
 bool kvm_switch_controller_enqueue_report(
@@ -261,5 +267,5 @@ bool kvm_switch_controller_enqueue_report(
         action_data.report_data_len
     );
 
-    return kvm_switch_enqueue_action(KVM_SWITCH_CONTROLLER_OP_HID_REPORT, &action_data, sizeof(action_data));
+    return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_HID_REPORT, &action_data, sizeof(action_data));
 }

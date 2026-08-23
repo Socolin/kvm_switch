@@ -24,17 +24,40 @@ void kvm_switch_node_task() {
         return;
 
     switch (action.opcode) {
-        case KVM_SWITCH_CONTROLLER_OP_HID_MOUNT:
-            // hid_mgr_register_hid();
+        case KVM_SWITCH_CONTROLLER_OP_HID_MOUNT: {
+            const kvm_switch_node_action_hid_mount_data_t *action_data = (kvm_switch_node_action_hid_mount_data_t *)
+                    action.data;
+            hid_mgr_register_hid(
+                action_data->dev_addr, // Not need on node side
+                action_data->host_hid_idx,
+                action_data->kvm_hid_idx,
+                action_data->itf_protocol,
+                action_data->report_desc,
+                action_data->report_desc_len
+            );
             break;
-        case KVM_SWITCH_CONTROLLER_OP_HID_UMOUNT:
-            // hid_mgr_unregister_hid();
+        }
+        case KVM_SWITCH_CONTROLLER_OP_HID_UMOUNT: {
+            const kvm_switch_node_action_hid_umount_data_t *action_data = (kvm_switch_node_action_hid_umount_data_t *)
+                    action.data;
+            hid_mgr_unregister_hid(action_data->dev_addr, action_data->host_hid_idx);
             break;
-        case KVM_SWITCH_CONTROLLER_OP_HID_REPORT:
-            // usb_device_send_report();
+        }
+        case KVM_SWITCH_CONTROLLER_OP_HID_REPORT: {
+            const kvm_switch_node_action_hid_report_data_t *action_data = (kvm_switch_node_action_hid_report_data_t *)
+                    action.data;
+            usb_device_send_report(
+                action_data->kvm_hid_idx,
+                action_data->report_id,
+                action_data->report_data,
+                action_data->report_data_len
+            );
             break;
+        }
         case KVM_SWITCH_CONTROLLER_OP_CONNECT_USB_DEVICE:
-            usb_device_connect_to_computer(0);
+            const kvm_switch_node_action_connect_usb_device_data_t *action_data = (
+                kvm_switch_node_action_connect_usb_device_data_t *) action.data;
+            usb_device_connect_to_computer(0, action_data->vid, action_data->pid);
             break;
     }
 }
@@ -64,7 +87,7 @@ void kvm_switch_node_computer_set_report(
 // ║         KVM switch Action        ║
 // ╚══════════════════════════════════╝
 
-static bool kvm_switch_enqueue_action(
+static bool kvm_switch_node_enqueue_action(
     const kvm_switch_controller_action_opcode_t opcode,
     const void *data,
     const size_t data_len
@@ -78,4 +101,64 @@ static bool kvm_switch_enqueue_action(
     memcpy(action.data, data, data_len);
 
     return queue_try_add(&kvm_switch.action_queue, &action);
+}
+
+void kvm_switch_node_enqueue_hid_mount(
+    const uint8_t dev_addr,
+    const uint8_t host_hid_idx,
+    const uint8_t kvm_hid_idx,
+    const uint8_t itf_protocol,
+    const uint16_t vid,
+    const uint16_t pid,
+    uint8_t *const report_desc, // FIXME: Replace this with malloc_uint8_t or something like that
+    const uint16_t report_desc_len
+) {
+    const kvm_switch_node_action_hid_mount_data_t action_data = {
+        .dev_addr = dev_addr,
+        .host_hid_idx = host_hid_idx,
+        .kvm_hid_idx = kvm_hid_idx,
+        .itf_protocol = itf_protocol,
+        .report_desc = report_desc,
+        .desc_len = report_desc_len,
+        .pid = pid,
+        .vid = vid,
+    };
+
+    kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_HID_MOUNT, &action_data, sizeof(action_data));
+}
+
+void kvm_switch_node_enqueue_hid_umount(
+    const uint8_t dev_addr,
+    const uint8_t host_hid_idx
+) {
+    const kvm_switch_node_action_hid_umount_data_t action_data = {
+        .dev_addr = dev_addr,
+        .host_hid_idx = host_hid_idx,
+    };
+    kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_HID_UMOUNT, &action_data, sizeof(action_data));
+}
+
+void kvm_switch_node_enqueue_hid_report(
+    const uint8_t kvm_hid_idx,
+    const uint8_t report_id,
+    const uint16_t report_data_len,
+    const uint8_t *const report_data
+) {
+    kvm_switch_node_action_hid_report_data_t action_data = {
+        .kvm_hid_idx = kvm_hid_idx,
+        .report_id = report_id,
+        .report_data_len = report_data_len,
+    };
+    if (report_data_len > sizeof(action_data.report_data)) {
+        logf_critical("Report data length exceeds buffer size: %u", report_data_len);
+        return;
+    }
+    memcpy(action_data.report_data, report_data, report_data_len);
+    kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_HID_REPORT, &action_data, sizeof(action_data));
+}
+
+void kvm_switch_node_enqueue_connect_usb_device() {
+    const kvm_switch_node_action_connect_usb_device_data_t action_data = {
+    };
+    kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_CONNECT_USB_DEVICE, &action_data, sizeof(action_data));
 }

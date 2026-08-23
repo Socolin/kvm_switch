@@ -105,7 +105,7 @@ bool hid_mgr_register_hid(
     hid->report_desc_len = report_desc_len;
     hid->use_report_id = is_report_id_present_in_descriptor(report_desc, report_desc_len);
 
-    logf_debug("dev_addr: %u, interface_idx: %u, interface_protocol: %u, report_desc_len: %u, use_report_id: %u",
+    logf_debug("dev_addr: %u, interface_idx: %u, itf_protocol: %u, report_desc_len: %u, use_report_id: %u",
                dev_addr, host_hid_idx, itf_protocol, report_desc_len, hid->use_report_id);
 
     return true;

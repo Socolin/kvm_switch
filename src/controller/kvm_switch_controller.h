@@ -114,7 +114,7 @@ bool kvm_switch_controller_enqueue_device_umount(
 /**
  * @param dev_addr Device address (Which port the device is connected. Values: 1, 2)
  * @param host_hid_idx HID interface index on USB Host side (Where the keyboard / mouse are connected)
- * @param interface_protocol Interface protocol \see hid_interface_protocol_enum_t
+ * @param itf_protocol Interface protocol \see hid_interface_protocol_enum_t
  * @param pid USB Product ID
  * @param vid USB Vendor ID
  * @param report_desc Report descriptor \see hid1_11.pdf
@@ -126,7 +126,7 @@ bool kvm_switch_controller_enqueue_device_umount(
 bool kvm_switch_controller_enqueue_hid_mount(
     uint8_t dev_addr,
     uint8_t host_hid_idx,
-    uint8_t interface_protocol,
+    uint8_t itf_protocol,
     uint16_t pid,
     uint16_t vid,
     const uint8_t *report_desc,

@@ -22,13 +22,9 @@ static usb_device_t usb_device;
 // ╚══════════════════════════════════╝
 
 void usb_device_init(
-    const uint16_t vid,
-    const uint16_t pid,
     const set_report_cb_t set_report_cb,
     const set_hid_protocol_cb_t set_hid_protocol_cb
 ) {
-    usb_device.vid = vid;
-    usb_device.pid = pid;
     usb_device.set_computer_report_cb = set_report_cb;
     usb_device.set_computer_hid_protocol_cb = set_hid_protocol_cb;
 }
@@ -38,8 +34,12 @@ void usb_device_task() {
 }
 
 void usb_device_connect_to_computer(
-    const uint8_t rhport
+    const uint8_t rhport,
+    const uint16_t vid,
+    const uint16_t pid
 ) {
+    usb_device.vid = vid;
+    usb_device.pid = pid;
     if (tud_inited()) {
         log_info("Re-initializing USB device");
         tud_deinit(rhport);
@@ -60,7 +60,7 @@ void usb_device_connect_to_computer(
 void usb_device_send_report(
     const uint8_t kvm_hid_idx,
     const uint8_t report_id,
-    const uint8_t* report_data,
+    const uint8_t *report_data,
     const uint8_t report_data_len
 ) {
     if (!tud_hid_n_ready(kvm_hid_idx)) {
