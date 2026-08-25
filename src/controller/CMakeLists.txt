@@ -5,7 +5,7 @@ add_executable(kvm_controller
 
         main.c
         computer_manager.c
-        extension_host.c
+        node_link_ctrl.c
         kvm_switch_controller.c
         usb_host.c
         ../shared_usb/usb_device.c
@@ -24,6 +24,7 @@ target_link_libraries(kvm_controller
         shared
         pico_stdlib
         pico_multicore
+        hardware_spi
         pico_pio_usb
         tinyusb_device
         tinyusb_host

@@ -3,6 +3,8 @@ add_library(shared
         crc.c
         hid_manager.c
         utils.h
+        report_descriptor.c
+        node_link.c
 )
 
 target_include_directories(shared
@@ -12,4 +14,5 @@ target_include_directories(shared
 
 target_link_libraries(shared
         pico_stdlib
+        hardware_spi
 )

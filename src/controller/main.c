@@ -1,8 +1,13 @@
+#if !PICO_RP2350
+#error "This targets the Pico 2 (RP2350) only"
+#endif
+
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include <string.h>
 
 #include "computer_manager.h"
+#include "node_link_ctrl.h"
 #include "../shared/hid_manager.h"
 #include "kvm_switch_controller.h"
 #include "../shared/logger.h"
@@ -49,8 +54,16 @@ static void core1_main() {
 
     while (true) {
         usb_host_task();
-        watchdog_update();
     }
+}
+
+#define RUN_NODES_GPIO 22
+static void restart_kvm_nodes() {
+    gpio_init(RUN_NODES_GPIO);
+    gpio_set_dir(RUN_NODES_GPIO, GPIO_OUT);
+    sleep_us(10);
+    gpio_set_dir(RUN_NODES_GPIO, GPIO_IN);
+    sleep_ms(50);
 }
 
 static void on_usb_device_set_report(
@@ -71,6 +84,14 @@ static void on_usb_device_set_hid_protocol(
 }
 
 int main() {
+    // To use Pico-PIO-USB the system clock should be multiple of 12MHz.
+    // USB requires a very precise clock and since PIO are working at a multiple
+    // of the core frequency if it's not a multiple of 12MHz, some cycle will be longer or shorter and it will
+    // create error when writing / reading usb.
+    // FIXME: Can we update this for pico 2 ? like 144000
+    // FIXME: This can only works for pico 2 now, so add check
+    set_sys_clock_khz(120'000, true);
+
     watchdog_enable(5000, 1);
 
     stdio_init_all();
@@ -78,18 +99,10 @@ int main() {
     logger_init(LOG_LEVEL_DEBUG, LOG_LEVEL_DEBUG);
 
     quick_reset_button_init();
+    restart_kvm_nodes();
 
     log_info("KVM controller is starting");
     logf_info("Version: %s", BUILD_DATE);
-
-    // To use Pico-PIO-USB the system clock should be multiple of 12MHz.
-    // USB requires a very precise clock and since PIO are working at a multiple
-    // of the core frequency if it's not a multiple of 12MHz, some cycle will be longer or shorter and it will
-    // create error when writing / reading usb.
-    // FIXME: Can we update this for pico 2 ? like 144000
-    // FIXME: This can only works for pico 2 now, so add check
-    set_sys_clock_khz(120000, true);
-
     sleep_ms(10);
 
     computer_manager_init();
@@ -97,9 +110,9 @@ int main() {
 
     hid_mgr_init();
     kvm_switch_controller_init();
+    node_link_ctrl_init();
+
     usb_device_init(
-        USB_VID,
-        USB_PID,
         on_usb_device_set_report,
         on_usb_device_set_hid_protocol
     );
@@ -118,6 +131,7 @@ int main() {
     while (true) {
         usb_device_task();
         kvm_switch_controller_task();
+        node_link_ctrl_task();
         watchdog_update();
     }
 }

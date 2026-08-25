@@ -10,15 +10,30 @@ typedef struct {
     uint8_t itf_protocol; /**< Interface protocol \see hid_interface_protocol_enum_t */
     uint8_t *report_desc; /**< Pointer to the report descriptor (malloced) */
     uint16_t report_desc_len;
+    uint16_t vid;
+    uint16_t pid;
     bool use_report_id; /**< **true** when the HID descriptor include one or multiple report ID */
 } hid_t;
 
 void hid_mgr_init();
 
+bool hid_mgr_register_at_hid(
+    uint8_t dev_addr,
+    uint8_t host_hid_idx,
+    uint8_t kvm_hid_idx,
+    uint8_t itf_protocol,
+    uint16_t vid,
+    uint16_t pid,
+    uint8_t *report_desc,
+    uint16_t report_desc_len
+);
+
 bool hid_mgr_register_hid(
     uint8_t dev_addr,
     uint8_t host_hid_idx,
     uint8_t itf_protocol,
+    uint16_t vid,
+    uint16_t pid,
     uint8_t *report_desc,
     uint16_t report_desc_len
 );
@@ -28,12 +43,12 @@ void hid_mgr_unregister_hid(
     uint8_t host_hid_idx
 );
 
-const hid_t* hid_mgr_get_by_host_idx(
+const hid_t *hid_mgr_get_by_host_idx(
     uint8_t dev_addr,
     uint8_t host_hid_idx
 );
 
-const hid_t* hid_mgr_get_by_kvm_idx(
+const hid_t *hid_mgr_get_by_kvm_idx(
     uint8_t kvm_hid_idx
 );
 

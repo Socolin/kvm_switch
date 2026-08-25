@@ -5,7 +5,7 @@ add_executable(kvm_node
 
         main.c
         kvm_switch_node.c
-        extension_node.c
+        node_link_node.c
         ../shared_usb/usb_device.c
 )
 

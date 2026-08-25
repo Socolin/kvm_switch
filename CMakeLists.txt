@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 
+# Not tested on pico, only on pico2 but from what I saw, the pico usb does not have enough endpoints
+set(PICO_BOARD pico2)
 # Pull in the SDK — must come before project()
 include(pico_sdk_import.cmake)
 

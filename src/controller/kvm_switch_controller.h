@@ -1,5 +1,5 @@
-#ifndef HID_H
-#define HID_H
+#pragma once
+
 #include <stdint.h>
 
 #include "tusb.h"
@@ -50,10 +50,11 @@ typedef enum {
     KVM_SWITCH_CONTROLLER_OP_HID_MOUNT,
     KVM_SWITCH_CONTROLLER_OP_HID_UMOUNT,
     KVM_SWITCH_CONTROLLER_OP_HID_REPORT,
-} kvm_switch_controller_action_opcode_t;
+    KVM_SWITCH_CONTROLLER_OP_COMPUTER_READY,
+} kvm_switch_node_action_opcode_t;
 
 typedef struct {
-    kvm_switch_controller_action_opcode_t opcode;
+    kvm_switch_node_action_opcode_t opcode;
     size_t data_len;
     uint8_t data[128];
 } kvm_switch_action_t;
@@ -66,20 +67,20 @@ typedef struct __attribute__((packed)) {
     const uint16_t pid; /**< The USB product id */
     uint8_t *report_desc; /**< HID report descriptor. (malloced, need to be freed by consumer). \see hid1_11.pdf */
     const uint16_t desc_len; /**< HID report descriptor length */
-} kvm_switch_controller_action_hid_mount_data_t;
+} ksc_action_hid_mount_data_t;
 
 typedef struct __attribute__((packed)) {
     const uint8_t dev_addr; /**< Device address (Which port the device is connected. Values: 1, 2) */
-} kvm_switch_controller_action_device_mount_data_t;
+} ksc_action_device_mount_data_t;
 
 typedef struct __attribute__((packed)) {
     const uint8_t dev_addr; /**< Device address (Which port the device is connected. Values: 1, 2) */
     const uint8_t host_hid_idx; /**< HID interface index on USB Host side (Where the keyboard / mouse are connected) */
-} kvm_switch_controller_action_hid_umount_data_t;
+} ksc_action_hid_umount_data_t;
 
 typedef struct {
     const uint8_t dev_addr; /**< Device address (Which port the device is connected. Values: 1, 2) */
-} kvm_switch_controller_action_device_umount_data_t;
+} ksc_action_device_umount_data_t;
 
 typedef struct __attribute__((packed)) {
     const uint8_t dev_addr; /**< Device address (Which port the device is connected. Values: 1, 2) */
@@ -89,7 +90,11 @@ typedef struct __attribute__((packed)) {
     const uint8_t report_id; /**< The report ID if any. 0 = no report id */
     const uint16_t report_data_len; /**< The length of the report data */
     uint8_t report_data[96]; /**< The report data */
-} kvm_switch_controller_action_hid_report_data_t;
+} ksc_action_hid_report_data_t;
+
+typedef struct {
+    const uint8_t computer_id;
+} ksc_action_computer_rdy_data_t;
 
 /**
  * @param dev_addr Device address (Which port the device is connected. Values: 1, 2)
@@ -165,4 +170,6 @@ bool kvm_switch_controller_enqueue_report(
     uint16_t report_len
 );
 
-#endif
+bool kvm_switch_controller_enqueue_computer_ready(
+    uint8_t computer_id
+);

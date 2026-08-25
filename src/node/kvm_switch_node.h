@@ -39,14 +39,14 @@ void kvm_switch_node_computer_set_report(
 // ╚══════════════════════════════════╝
 
 typedef enum {
-    KVM_SWITCH_CONTROLLER_OP_HID_MOUNT,
-    KVM_SWITCH_CONTROLLER_OP_HID_UMOUNT,
-    KVM_SWITCH_CONTROLLER_OP_HID_REPORT,
-    KVM_SWITCH_CONTROLLER_OP_CONNECT_USB_DEVICE,
-} kvm_switch_controller_action_opcode_t;
+    KVM_SWITCH_NODE_OP_HID_MOUNT,
+    KVM_SWITCH_NODE_OP_HID_UMOUNT,
+    KVM_SWITCH_NODE_OP_HID_REPORT,
+    KVM_SWITCH_NODE_OP_CONNECT_USB_DEVICE,
+} kvm_switch_node_action_opcode_t;
 
 typedef struct {
-    kvm_switch_controller_action_opcode_t opcode;
+    kvm_switch_node_action_opcode_t opcode;
     uint8_t data[128];
     size_t data_len;
 } kvm_switch_action_t;
@@ -103,4 +103,7 @@ void kvm_switch_node_enqueue_hid_report(
     const uint8_t *report_data
 );
 
-void kvm_switch_node_enqueue_connect_usb_device();
+void kvm_switch_node_enqueue_connect_usb_device(
+    uint16_t vid,
+    uint16_t pid
+);
