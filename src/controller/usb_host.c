@@ -53,8 +53,7 @@ static void usb_host_process_action() {
 
     switch (hid_action.opcode) {
         case HID_SET_REPORT: {
-            hid_action_set_report_t *data = (hid_action_set_report_t *) hid_action.data;
-            usb_host.should_process_actions = false;
+            hid_action_set_report_t *const data = (hid_action_set_report_t *) hid_action.data;
             if (!tuh_hid_set_report(
                 data->dev_addr,
                 data->host_hid_idx,
@@ -66,6 +65,7 @@ static void usb_host_process_action() {
                 logf_error("Failed to set report for device: %u interface: %u", data->dev_addr, data->host_hid_idx);
                 return;
             }
+            usb_host.should_process_actions = false;
             logf_info("Successfully set report for device: %u interface: %u", data->dev_addr, data->host_hid_idx);
             log_debug_hex_buffer(data->buffer, data->buffer_len);
             break;
@@ -74,12 +74,12 @@ static void usb_host_process_action() {
             const hid_action_set_protocol_t *data = (hid_action_set_protocol_t *) hid_action.data;
             if (tuh_hid_get_protocol(data->dev_addr, data->host_hid_idx) == data->hid_protocol)
                 break;
-            usb_host.should_process_actions = false;
             if (!tuh_hid_set_protocol(data->dev_addr, data->host_hid_idx, data->hid_protocol)) {
                 logf_error("Failed to set HID protocol for device %u interface %u to %u", data->dev_addr,
                            data->host_hid_idx, data->hid_protocol);
                 return;
             }
+            usb_host.should_process_actions = false;
             break;
         }
         default:
@@ -109,6 +109,12 @@ static bool usb_host_enqueue_hid_action(
         .opcode = opcode,
         .data_len = data_len,
     };
+
+    if (data_len > sizeof(action.data)) {
+        logf_error("data_len (%u) exceeds action.data size (%u)", data_len, sizeof(action.data));
+        return false;
+    }
+
     memcpy(action.data, data, data_len);
     return queue_try_add(&usb_host.action_queue, &action);
 }

@@ -61,7 +61,7 @@ void usb_device_send_report(
     const uint8_t kvm_hid_idx,
     const uint8_t report_id,
     const uint8_t *report_data,
-    const uint8_t report_data_len
+    const uint16_t report_data_len
 ) {
     if (!tud_hid_n_ready(kvm_hid_idx)) {
         logf_warning("tud_hid_ready(%u) == false, skip report", kvm_hid_idx);

@@ -32,6 +32,6 @@ void usb_device_send_report(
     uint8_t kvm_hid_idx,
     uint8_t report_id,
     const uint8_t *report_data,
-    uint8_t report_data_len
+    uint16_t report_data_len
 );
 

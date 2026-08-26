@@ -106,7 +106,7 @@ static void kvm_switch_process_actions() {
                 break;
             }
             default:
-                // FIXME: error
+                logf_error("Unknown kvm switch action opcode: %u", kvm_switch_action.opcode);
                 break;
         }
     }

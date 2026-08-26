@@ -89,7 +89,6 @@ int main() {
     // of the core frequency if it's not a multiple of 12MHz, some cycle will be longer or shorter and it will
     // create error when writing / reading usb.
     // FIXME: Can we update this for pico 2 ? like 144000
-    // FIXME: This can only works for pico 2 now, so add check
     set_sys_clock_khz(120'000, true);
 
     watchdog_enable(5000, 1);
