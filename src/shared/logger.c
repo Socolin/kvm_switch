@@ -12,6 +12,7 @@
 typedef struct __attribute__((packed)) {
     const uint64_t timestamp;
     const uint8_t log_level; // log_level_t
+    const uint16_t line;
     const uint8_t func_len;
     const uint8_t message_len;
 } internal_log_t;
@@ -123,12 +124,14 @@ static const char *log_level_to_string(uint8_t log_level) {
 void log_write(
     const uint8_t log_level,
     const char *func,
+    const uint16_t line,
     const char *message,
     const uint8_t message_len
 ) {
     const internal_log_t log = {
         .timestamp = time_us_64(),
         .log_level = log_level,
+        .line = line,
         .func_len = strlen(func),
         .message_len = message_len,
     };
@@ -140,10 +143,10 @@ void log_write(
     }
     if (logger->immediate_log_min_log_level <= log_level) {
 #if LOG_COLOR
-        printf("[%llu][%s][%s] %.*s\n", log.timestamp, log_level_with_color_to_string(log_level), func, message_len,
+        printf("[%llu][%s][%s:%u] %.*s\n", log.timestamp, log_level_with_color_to_string(log_level), func, log.line, message_len,
                message);
 #else
-        printf("[%llu][%s][%s] %.*s\n", log.timestamp, log_level_to_string(log_level), func, message_len, message);
+        printf("[%llu][%s][%s:%u] %.*s\n", log.timestamp, log_level_to_string(log_level), func, log.line, message_len, message);
 #endif
     }
 }
@@ -155,7 +158,8 @@ void log_write(
 void log_hex_buffer(
     const uint8_t log_level,
     const char *func,
-    const uint8_t *data,
+    const uint16_t line,
+    const void *data,
     const size_t data_len
 ) {
     char message_buffer[256];
@@ -164,7 +168,7 @@ void log_hex_buffer(
         size_t str_size = 6;
         for (size_t i = 0; i < 16; i++) {
             if (data_offset + i < data_len)
-                snprintf(message_buffer + str_size, 4, "%02x ", data[data_offset + i]);
+                snprintf(message_buffer + str_size, 4, "%02x ", ((const uint8_t*)data)[data_offset + i]);
             else
                 snprintf(message_buffer + str_size, 4, "   ");
             str_size += 3;
@@ -177,7 +181,7 @@ void log_hex_buffer(
         str_size += 3;
         for (size_t i = 0; i < 16; i++) {
             if (data_offset + i < data_len) {
-                const uint8_t c = data[data_offset + i];
+                const uint8_t c = ((const uint8_t*)data)[data_offset + i];
                 message_buffer[str_size] = isprint(c) ? c : '.';
                 str_size += 1;
             }
@@ -185,7 +189,7 @@ void log_hex_buffer(
         snprintf(message_buffer + str_size, 4, " |");
         str_size += 2;
         message_buffer[str_size] = '\0';
-        log_write(log_level, func, message_buffer, str_size);
+        log_write(log_level, func, line, message_buffer, str_size);
     }
 }
 
@@ -196,6 +200,7 @@ void log_hex_buffer(
 void log_write_format(
     const uint8_t log_level,
     const char *func,
+    const uint16_t line,
     const char *message,
     ...
 ) {
@@ -214,6 +219,7 @@ void log_write_format(
         .timestamp = time_us_64(),
         .log_level = log_level,
         .func_len = strlen(func),
+        .line = line,
         .message_len = message_len,
     };
     logger_t *logger = &default_logger[get_core_num()];
@@ -224,10 +230,10 @@ void log_write_format(
     }
     if (logger->immediate_log_min_log_level <= log_level) {
 #if LOG_COLOR
-        printf("[%llu][%s][%s] %.*s\n", log.timestamp, log_level_with_color_to_string(log_level), func, message_len,
+        printf("[%llu][%s][%s:%u] %.*s\n", log.timestamp, log_level_with_color_to_string(log_level), func, line, message_len,
                message_buffer);
 #else
-        printf("[%llu][%s][%s] %.*s\n", log.timestamp, log_level_to_string(log_level), func, message_len,
+        printf("[%llu][%s][%s:%u] %.*s\n", log.timestamp, log_level_to_string(log_level), func, log.line, message_len,
                message_buffer);
 #endif
     }
@@ -244,7 +250,7 @@ bool try_dequeue_log(
     uint64_t min_timestamp = (uint64_t) -1;
     for (size_t c = 0; c < NUM_CORES; c++) {
         logger_t *core_logger = &default_logger[c];
-        const size_t read_count = peek_bytes_from_log_buffer(core_logger, (uint8_t *) &out_log, sizeof(*out_log));
+        const size_t read_count = peek_bytes_from_log_buffer(core_logger, (uint8_t *) out_log, sizeof(*out_log));
         if (read_count == 0)
             continue;
         if (out_log->timestamp < min_timestamp) {
