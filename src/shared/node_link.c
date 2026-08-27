@@ -169,14 +169,14 @@ static bool node_link_exchange_header(
     return true;
 }
 
-static size_t node_link_prepare_tx_buffer(
+static uint32_t node_link_prepare_tx_buffer(
     node_link_t *link,
     const node_link_msg_t *message
 ) {
     if (message == nullptr)
         return 0;
 
-    size_t message_length = 0;
+    uint32_t message_length = 0;
     memcpy(link->tx_buffer, &message->header, sizeof(message->header));
 
     message_length += sizeof(message->header);
@@ -228,7 +228,7 @@ static bool node_link_map_rx_buffer_to_message(
 
 static void node_link_init_data_header(
     node_link_transport_header_t *header,
-    const size_t message_len,
+    const uint32_t message_len,
     const uint16_t message_crc
 ) {
     header->header = NL_MESSAGE_HEADER;
@@ -271,7 +271,7 @@ bool node_link_send_message_blocking(
     const node_link_msg_t *tx_message,
     void *udata
 ) {
-    const size_t tx_message_len = node_link_prepare_tx_buffer(link, tx_message);
+    const uint32_t tx_message_len = node_link_prepare_tx_buffer(link, tx_message);
     const uint16_t tx_message_crc = crc16_ccitt_false(link->tx_buffer, tx_message_len);
 
     node_link_transport_header_t tx_header;
@@ -312,7 +312,7 @@ bool node_link_send_message_blocking(
         return false;
     }
 
-    node_link_exchange_ack(link, 1);;
+    node_link_exchange_ack(link, 1);
 
     if (rx_header.message_len > 0) {
         node_link_msg_t rx_message;
@@ -338,11 +338,19 @@ static uint16_t node_link_compute_transport_crc(
  * This is used to force the node that may be blocked in a read operation to exit it.
  * After an error the node side will wait long enough for this to be completed.
  */
+
 void node_link_drain_buffer(
     const node_link_t *link
 ) {
+    // If this gpio is not set, the node is not reading
+    if (!gpio_get(link->spi_ready_gpio))
+        return;
+
+    log_debug("Draining buffer");
+
     node_link_start_transaction(link);
-    spi_write_blocking(link->spi, link->drain_buffer, sizeof(link->drain_buffer));
+    while (!gpio_get(link->spi_ready_gpio))
+        spi_write_blocking(link->spi, link->drain_buffer, sizeof(link->drain_buffer));
     node_link_end_transaction(link);
 }
 

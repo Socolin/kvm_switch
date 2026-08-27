@@ -11,8 +11,7 @@
  * Contains basic messages exchanged between the extension node and the controller node.
  */
 
-// FIXME: Test values
-#define NODE_LINK_SPI_BAUD_RATE 1'000'000
+#define NODE_LINK_SPI_BAUD_RATE 4'000'000
 #define MAX_WAIT_FOR_SPI_READY_US 100'000
 
 
@@ -49,7 +48,7 @@ typedef enum {
 typedef struct __attribute__((packed)) {
     uint8_t header; // Always 0x42
     uint8_t protocol_opcode; //
-    size_t message_len;
+    uint32_t message_len;
     uint16_t message_crc;
     // Keep header_crc at the end of the struct
     uint16_t header_crc;
@@ -155,7 +154,7 @@ typedef struct {
      */
     uint8_t rx_buffer[4096 + 256];
     uint8_t tx_buffer[4096 + 256];
-    uint8_t drain_buffer[4096 + 256];
+    uint8_t drain_buffer[100];
     message_handler_t message_handler;
     size_t baud_rate;
 } node_link_t;
