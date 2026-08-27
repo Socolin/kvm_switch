@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "logger.h"
 #include "node_link.h"
-#include "../shared/logger.h"
 
 typedef struct {
     computer_t computers[MAX_COMPUTER];
@@ -24,7 +24,7 @@ void computer_manager_init() {
         }
     }
     // Computer 0 is the local one
-    computer_manager_configure_computer(0, -1, -1, -1);
+    computer_manager_configure_computer(LOCAL_COMPUTER_ID, -1, -1, -1);
 }
 
 void computer_manager_init_computer(

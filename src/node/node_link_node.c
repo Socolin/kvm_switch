@@ -20,7 +20,7 @@ static node_link_node_t node = {};
 #define SPI_READY_GPIO 6
 #define DATA_READY_GPIO 7
 
-static bool node_link_node_process_received_message(const node_link_msg_t *message, void *udata);
+static void node_link_node_process_received_message(const node_link_msg_t *message, void *udata);
 
 void node_link_node_init() {
     gpio_init(SPI_READY_GPIO);
@@ -42,7 +42,7 @@ static void node_link_node_clear_data_ready() {
     gpio_put(DATA_READY_GPIO, 0);
 }
 
-static bool node_link_node_process_received_message(
+static void node_link_node_process_received_message(
     const node_link_msg_t *message,
     [[maybe_unused]] void *udata
 ) {
@@ -54,11 +54,11 @@ static bool node_link_node_process_received_message(
             break;
         }
         case NL_CTRL_MESSAGE_OP_HID_MOUNT: {
-            const nl_ctrl_msg_hid_mount_data_t *message_data = (nl_ctrl_msg_hid_mount_data_t *) message->data;
+            auto const message_data = (nl_ctrl_msg_hid_mount_data_t *) message->data;
             uint8_t *report_desc = malloc(message->extra_data[0].data_len);
             if (report_desc == nullptr) {
                 log_critical("failed to allocate memory for report descriptor");
-                return false;
+                return;
             }
             memcpy(report_desc, message->extra_data[0].data, message->extra_data[0].data_len);
 
@@ -75,13 +75,12 @@ static bool node_link_node_process_received_message(
             break;
         }
         case NL_CTRL_MESSAGE_OP_HID_UMOUNT: {
-            const nl_ctrl_msg_hid_umount_data_t *message_data = (nl_ctrl_msg_hid_umount_data_t *) message->data;
+            auto const message_data = (nl_ctrl_msg_hid_umount_data_t *) message->data;
             kvm_switch_node_enqueue_hid_umount(message_data->dev_addr, message_data->host_hid_idx);
             break;
         }
         case NL_CTRL_MESSAGE_OP_HID_REPORT: {
-            const nl_ctrl_msg_hid_report_data_t *message_data = (nl_ctrl_msg_hid_report_data_t *)
-                    message->data;
+            auto const message_data = (nl_ctrl_msg_hid_report_data_t *) message->data;
             kvm_switch_node_enqueue_hid_report(
                 message_data->kvm_hid_idx,
                 message_data->report_id,
@@ -92,35 +91,38 @@ static bool node_link_node_process_received_message(
         }
         case NL_CTRL_MESSAGE_OP_START_USB_DEVICE: {
             logf_info("Start USB message received from controller");
-            const nl_ctrl_msg_start_usb_device_data_t *message_data =
-                    (nl_ctrl_msg_start_usb_device_data_t *) message->data;
+            auto const message_data = (nl_ctrl_msg_start_usb_device_data_t *) message->data;
             kvm_switch_node_enqueue_connect_usb_device(message_data->vid, message_data->pid);
             break;
         }
-        default:
+        default: {
             logf_error("invalid opcode: %04x", message->header.opcode);
-            return false;
+            break;
+        }
     }
-    return true;
 }
 
 void node_link_node_run() {
-    const size_t delay_before_retry_after_error = node_link_get_us_delay_before_retry(&node.link);
+    const uint64_t delay_before_retry_after_error = node_link_get_us_delay_before_retry(&node.link);
 
     while (true) {
         node_link_msg_t message;
         if (!queue_try_peek(&node.message_queue, &message)) {
             // Nothing to send
             if (!node_link_send_message_blocking(&node.link, nullptr, nullptr)) {
-                sleep_us(delay_before_retry_after_error + 1000);
-                // FIXME: Maybe we could replace the sleep with a timer to not lcok the whole thing for long
+                // When a transmission happen, wait before trying again so the host can timeout and will not
+                // catch mid transmission data during next retry
+                node_link_drain_rx(&node.link);
+                log_warning("Transmission failed, waiting before retrying");
+                sleep_us(delay_before_retry_after_error + 1'000);
             }
         } else {
             if (!node_link_send_message_blocking(&node.link, &message, nullptr)) {
                 // When a transmission happen, wait before trying again so the host can timeout and will not
                 // catch mid transmission data during next retry
-                sleep_us(delay_before_retry_after_error + 1000);
-                // FIXME: Maybe we could replace the sleep with a timer to not lcok the whole thing for long
+                node_link_drain_rx(&node.link);
+                log_warning("Transmission failed, waiting before retrying");
+                sleep_us(delay_before_retry_after_error + 1'000);
             } else {
                 queue_remove_blocking(&node.message_queue, nullptr);
                 node_link_dispose_message(&message);

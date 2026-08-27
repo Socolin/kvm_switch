@@ -2,6 +2,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+// ReSharper disable once CppUnusedIncludeDirective used by strlen() during macro expansion
+#include <string.h>
 
 #define LOG_COLOR 1
 

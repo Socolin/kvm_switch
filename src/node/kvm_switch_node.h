@@ -1,5 +1,5 @@
 #pragma once
-#include <stddef.h>
+
 #include <stdint.h>
 
 // ╔══════════════════════════════════╗
@@ -33,6 +33,10 @@ void kvm_switch_node_computer_set_report(
     uint8_t const *report_data,
     uint16_t report_data_len
 );
+
+void kvm_switch_node_usb_device_mounted();
+
+void kvm_switch_node_usb_device_unmounted();
 
 // ╔══════════════════════════════════╗
 // ║         KVM switch Action        ║

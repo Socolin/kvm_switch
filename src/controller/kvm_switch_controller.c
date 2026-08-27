@@ -2,6 +2,10 @@
 
 #include <stdlib.h>
 
+#include "pico/multicore.h"
+#include "pico/util/queue.h"
+#include "class/hid/hid.h"
+
 #include "../shared/hid_manager.h"
 #include "../shared/logger.h"
 #include "../shared_usb/usb_device.h"
@@ -9,10 +13,6 @@
 #include "computer_manager.h"
 #include "node_link_ctrl.h"
 #include "usb_host.h"
-#include "class/hid/hid.h"
-#include "pico/bootrom.h"
-#include "pico/multicore.h"
-#include "pico/util/queue.h"
 
 // https://pid.codes/pids/
 // FIXME: Request PID when needed. Also evaluate possibility to make this configurable to allow to easily change it to
@@ -47,12 +47,21 @@ static void kvm_switch_ctrl_set_active_computer(
 
     const computer_t *computer = computer_manager_get_computer(computer_id);
     for (uint8_t kvm_hid_idx = 0; kvm_hid_idx < CFG_TUH_HID; kvm_hid_idx++) {
-        usb_host_enqueue_set_protocol(kvm_hid_idx, computer->hid_protocol_per_interface[kvm_hid_idx]);
+        const hid_t *hid = hid_mgr_get_by_kvm_idx(kvm_hid_idx);
+        if (hid == nullptr)
+            continue;
+
+        usb_host_enqueue_set_protocol(
+            hid->dev_addr,
+            hid->host_hid_idx,
+            computer->hid_protocol_per_interface[kvm_hid_idx]
+        );
 
         const computer_hid_report_t *report = computer->hid_reports_per_interface[kvm_hid_idx];
         while (report != nullptr) {
             usb_host_enqueue_set_report(
-                kvm_hid_idx,
+                hid->dev_addr,
+                hid->host_hid_idx,
                 report->report_id,
                 report->report_type,
                 report->report_data,
@@ -78,7 +87,7 @@ static void kvm_switch_process_actions() {
                 break;
             }
             case KVM_SWITCH_CONTROLLER_OP_HID_MOUNT: {
-                const ksc_action_hid_mount_data_t *data = (ksc_action_hid_mount_data_t *) kvm_switch_action.data;
+                auto const data = (ksc_action_hid_mount_data_t *) kvm_switch_action.data;
                 if (!hid_mgr_register_hid(
                         data->dev_addr,
                         data->host_hid_idx,
@@ -96,13 +105,12 @@ static void kvm_switch_process_actions() {
                 break;
             }
             case KVM_SWITCH_CONTROLLER_OP_HID_UMOUNT: {
-                const ksc_action_hid_umount_data_t *data = (ksc_action_hid_umount_data_t *) kvm_switch_action.data;
+                auto const data = (ksc_action_hid_umount_data_t *) kvm_switch_action.data;
                 hid_mgr_unregister_hid(data->dev_addr, data->host_hid_idx);
                 break;
             }
             case KVM_SWITCH_CONTROLLER_OP_HID_REPORT: {
-                const ksc_action_hid_report_data_t *data = (ksc_action_hid_report_data_t *) kvm_switch_action.data;
-
+                 auto const data = (ksc_action_hid_report_data_t *) kvm_switch_action.data;
 
                 if (data->itf_protocol == HID_ITF_PROTOCOL_KEYBOARD) {
                     bool scroll_lock_pressed = false;
@@ -150,7 +158,7 @@ static void kvm_switch_process_actions() {
                 break;
             }
             case KVM_SWITCH_CONTROLLER_OP_COMPUTER_READY: {
-                const ksc_action_computer_rdy_data_t *data = (ksc_action_computer_rdy_data_t *) kvm_switch_action.data;
+                auto const data = (ksc_action_computer_rdy_data_t *) kvm_switch_action.data;
 
                 logf_info("Computer ready: %u", data->computer_id);
 
@@ -200,7 +208,10 @@ void kvm_switch_controller_computer_set_hid_protocol(
     computer_manager_set_hid_protocol(computer_id, kvm_hid_idx, hid_protocol);
 
     if (kvm_switch.active_computer_id == computer_id) {
-        usb_host_enqueue_set_protocol(kvm_hid_idx, hid_protocol);
+        const hid_t *hid = hid_mgr_get_by_kvm_idx(kvm_hid_idx);
+        if (hid) {
+            usb_host_enqueue_set_protocol(hid->dev_addr, hid->host_hid_idx, hid_protocol);
+        }
     }
 }
 
@@ -220,8 +231,25 @@ void kvm_switch_controller_computer_set_report(
     }
 
     if (kvm_switch.active_computer_id == computer_id) {
-        usb_host_enqueue_set_report(kvm_hid_idx, report_id, report_type, report_data, report_data_len);
+        const hid_t *hid = hid_mgr_get_by_kvm_idx(kvm_hid_idx);
+        if (hid) {
+            usb_host_enqueue_set_report(
+                hid->dev_addr,
+                hid->host_hid_idx,
+                report_id,
+                report_type,
+                report_data,
+                report_data_len
+            );
+        }
     }
+}
+
+void kvm_switch_ctrl_usb_device_mounted() {
+    computer_manager_init_computer(LOCAL_COMPUTER_ID);
+}
+
+void kvm_switch_ctrl_usb_device_unmounted() {
 }
 
 // ╔══════════════════════════════════╗

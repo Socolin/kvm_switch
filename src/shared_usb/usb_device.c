@@ -11,8 +11,11 @@
 typedef struct {
     uint16_t vid;
     uint16_t pid;
+    bool connected;
     set_report_cb_t set_computer_report_cb;
     set_hid_protocol_cb_t set_computer_hid_protocol_cb;
+    usb_device_mounted_cb_t usb_device_mounted_cb;
+    usb_device_unmounted_cb_t usb_device_unmounted_cb;
 } usb_device_t;
 
 static usb_device_t usb_device;
@@ -23,10 +26,14 @@ static usb_device_t usb_device;
 
 void usb_device_init(
     const set_report_cb_t set_report_cb,
-    const set_hid_protocol_cb_t set_hid_protocol_cb
+    const set_hid_protocol_cb_t set_hid_protocol_cb,
+    const usb_device_mounted_cb_t usb_device_mounted_cb,
+    const usb_device_unmounted_cb_t usb_device_unmounted_cb
 ) {
     usb_device.set_computer_report_cb = set_report_cb;
     usb_device.set_computer_hid_protocol_cb = set_hid_protocol_cb;
+    usb_device.usb_device_mounted_cb = usb_device_mounted_cb;
+    usb_device.usb_device_unmounted_cb = usb_device_unmounted_cb;
 }
 
 void usb_device_task() {
@@ -47,7 +54,7 @@ void usb_device_connect_to_computer(
         log_info("Initializing USB device");
     }
 
-    // init device stack on configured roothub port
+    // init device stack on configured root hub port
     const tusb_rhport_init_t rh_init = {
         .role = TUSB_ROLE_DEVICE,
         .speed = TUD_OPT_HIGH_SPEED ? TUSB_SPEED_HIGH : TUSB_SPEED_FULL
@@ -63,12 +70,25 @@ void usb_device_send_report(
     const uint8_t *report_data,
     const uint16_t report_data_len
 ) {
+    // Don´t try to send a report if the USB device is not connected
+    if (!usb_device.connected)
+        return;
+
+    // Workaround to detect USB device unmount: https://github.com/hathach/tinyusb/issues/2700
+    if (!tud_ready()) {
+        log_info("USB device not ready, probably unplugged from computer");
+        usb_device.usb_device_unmounted_cb();
+        usb_device.connected = false;
+        return;
+    }
+
     if (!tud_hid_n_ready(kvm_hid_idx)) {
         logf_warning("tud_hid_ready(%u) == false, skip report", kvm_hid_idx);
         return;
     }
     if (!tud_hid_n_report(kvm_hid_idx, report_id, report_data, report_data_len)) {
-        log_error("tud_hid_n_report failed");
+        logf_error("tud_hid_n_report failed: kvm_hid_idx=%u, report_id=%u, report_data_len=%u",
+                   kvm_hid_idx, report_id, report_data_len);
     }
 }
 
@@ -337,12 +357,21 @@ void tud_mount_cb() {
 
         usb_device.set_computer_hid_protocol_cb(kvm_hid_idx, hid_protocol);
     }
+    usb_device.connected = true;
+    usb_device.usb_device_mounted_cb();
+
+    log_info("USB device mounted (plugged in a computer)");
 }
 
 void tud_umount_cb() {
     logf_debug("device unmounted");
 
-    // FIXME: Reset computer state
+    if (usb_device.connected) {
+        usb_device.usb_device_unmounted_cb();
+        usb_device.connected = false;
+    }
+
+    log_info("USB device unmounted (unplugged from computer)");
 }
 
 uint16_t tud_hid_get_report_cb(
@@ -354,7 +383,6 @@ uint16_t tud_hid_get_report_cb(
 ) {
     logf_debug("kvm_hid_idx: %u, report_id: %u, report_type: %u", kvm_hid_idx, report_id, report_type);
 
-    // FIXME: Is this needed ?
     memset(buffer, 0, reqlen);
 
     return 0;

@@ -40,6 +40,10 @@ void kvm_switch_controller_computer_set_report(
     uint16_t report_data_len
 );
 
+void kvm_switch_ctrl_usb_device_mounted();
+
+void kvm_switch_ctrl_usb_device_unmounted();
+
 // ╔══════════════════════════════════╗
 // ║         KVM switch Action        ║
 // ╚══════════════════════════════════╝
@@ -94,6 +98,8 @@ typedef struct __attribute__((packed)) {
 
 typedef struct {
     const uint8_t computer_id;
+    const uint16_t vid;
+    const uint16_t pid;
 } ksc_action_computer_rdy_data_t;
 
 /**

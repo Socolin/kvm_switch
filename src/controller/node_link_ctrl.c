@@ -3,13 +3,14 @@
 #include <math.h>
 #include <string.h>
 
+#include "hardware/spi.h"
+#include "hardware/gpio.h"
+
 #include "computer_manager.h"
-#include "node_link.h"
 #include "hid_manager.h"
 #include "kvm_switch_controller.h"
 #include "logger.h"
-#include "hardware/spi.h"
-#include "hardware/gpio.h"
+#include "node_link.h"
 
 typedef struct {
     node_link_t link;
@@ -17,7 +18,7 @@ typedef struct {
 
 static node_link_ctrl_t ctrl;
 
-static bool node_link_ctrl_process_received_message(const node_link_msg_t *message, void *udata);
+static void node_link_ctrl_process_received_message(const node_link_msg_t *message, void *udata);
 
 void node_link_ctrl_init() {
     for (int i = 1; i < MAX_COMPUTER; i++) {
@@ -36,11 +37,9 @@ void node_link_ctrl_init() {
     }
 
     node_link_init_controller(&ctrl.link, spi0, node_link_ctrl_process_received_message);
-
-    sleep_ms(300);
 }
 
-static bool node_link_ctrl_process_received_message(
+static void node_link_ctrl_process_received_message(
     const node_link_msg_t *message,
     void *udata
 ) {
@@ -55,8 +54,7 @@ static bool node_link_ctrl_process_received_message(
             break;
         }
         case NL_NODE_MESSAGE_OP_SET_REPORT: {
-            const nl_node_msg_hid_set_report_data_t *message_data = (nl_node_msg_hid_set_report_data_t *)
-                    message->data;
+            auto const message_data = (nl_node_msg_hid_set_report_data_t *) message->data;
             kvm_switch_controller_computer_set_report(
                 computer_id,
                 message_data->kvm_hid_idx,
@@ -68,7 +66,7 @@ static bool node_link_ctrl_process_received_message(
             break;
         }
         case NL_NODE_MESSAGE_OP_SET_HID_PROTOCOL: {
-            const nl_node_msg_hid_set_hid_protocol_data_t *message_data = (nl_node_msg_hid_set_hid_protocol_data_t *) message->data;
+            auto const message_data = (nl_node_msg_hid_set_hid_protocol_data_t *) message->data;
             kvm_switch_controller_computer_set_hid_protocol(
                 computer_id,
                 message_data->kvm_hid_idx,
@@ -76,11 +74,11 @@ static bool node_link_ctrl_process_received_message(
             );
             break;
         }
-        default:
+        default: {
             logf_error("invalid opcode: %04x", message->header.opcode);
-            return false;
+            break;
+        }
     }
-    return true;
 }
 
 
@@ -100,6 +98,7 @@ void node_link_ctrl_task() {
         node_link_msg_t message;
         if (queue_try_peek(&computer->message_queue, &message)) {
             if (!node_link_send_message_blocking(&ctrl.link, &message, &computer_id)) {
+                node_link_drain_rx(&ctrl.link);
                 node_link_drain_buffer(&ctrl.link);
             } else {
                 queue_remove_blocking(&computer->message_queue, nullptr);
@@ -107,6 +106,7 @@ void node_link_ctrl_task() {
             }
         } else if (data_available) {
             if (!node_link_send_message_blocking(&ctrl.link, nullptr, &computer_id)) {
+                node_link_drain_rx(&ctrl.link);
                 node_link_drain_buffer(&ctrl.link);
             }
         }
@@ -311,6 +311,6 @@ void node_link_ctrl_enqueue_send_report(
         computer_id,
         NL_CTRL_MESSAGE_OP_HID_REPORT,
         &message_data,
-        sizeof(message_data)
+        sizeof(message_data) - sizeof(message_data.report_data) + report_data_length
     );
 }

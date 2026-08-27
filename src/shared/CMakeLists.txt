@@ -1,11 +1,12 @@
 add_compile_options(-Wall -Wextra)
 add_library(shared
-        logger.c
         crc.c
         hid_manager.c
-        utils.h
-        report_descriptor.c
+        logger.c
         node_link.c
+        pico_utils.c
+        report_descriptor.c
+        utils.c
 )
 
 target_include_directories(shared

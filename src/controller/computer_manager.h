@@ -1,9 +1,11 @@
 #pragma once
 #include <stdint.h>
 
-#include "tusb_config.h"
 #include "pico/util/queue.h"
 
+#include "tusb_config.h"
+
+#define LOCAL_COMPUTER_ID 0
 #define MAX_COMPUTER 2
 
 /**

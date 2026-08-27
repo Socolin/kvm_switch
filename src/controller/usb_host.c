@@ -8,9 +8,8 @@
 #include "pio_usb_configuration.h"
 #include "tusb_config.h"
 
-#include "../shared/logger.h"
-#include "../shared/hid_manager.h"
 #include "kvm_switch_controller.h"
+#include "logger.h"
 
 typedef struct {
     queue_t action_queue;
@@ -53,7 +52,7 @@ static void usb_host_process_action() {
 
     switch (hid_action.opcode) {
         case HID_SET_REPORT: {
-            hid_action_set_report_t *const data = (hid_action_set_report_t *) hid_action.data;
+            auto const data = (hid_action_set_report_t *) hid_action.data;
             if (!tuh_hid_set_report(
                 data->dev_addr,
                 data->host_hid_idx,
@@ -71,7 +70,7 @@ static void usb_host_process_action() {
             break;
         }
         case HID_SET_PROTOCOL: {
-            const hid_action_set_protocol_t *data = (hid_action_set_protocol_t *) hid_action.data;
+            auto const data = (hid_action_set_protocol_t *) hid_action.data;
             if (tuh_hid_get_protocol(data->dev_addr, data->host_hid_idx) == data->hid_protocol)
                 break;
             if (!tuh_hid_set_protocol(data->dev_addr, data->host_hid_idx, data->hid_protocol)) {
@@ -120,16 +119,13 @@ static bool usb_host_enqueue_hid_action(
 }
 
 bool usb_host_enqueue_set_protocol(
-    const uint8_t kvm_hid_idx,
+    const uint8_t dev_addr,
+    const uint8_t host_hid_idx,
     const uint8_t hid_protocol
 ) {
-    const hid_t *hid = hid_mgr_get_by_kvm_idx(kvm_hid_idx);
-    if (hid == nullptr)
-        return false;
-
     const hid_action_set_protocol_t action_data = {
-        .dev_addr = hid->dev_addr,
-        .host_hid_idx = hid->host_hid_idx,
+        .dev_addr = dev_addr,
+        .host_hid_idx = host_hid_idx,
         .hid_protocol = hid_protocol,
     };
 
@@ -137,19 +133,16 @@ bool usb_host_enqueue_set_protocol(
 }
 
 bool usb_host_enqueue_set_report(
-    const uint8_t kvm_hid_idx,
+    const uint8_t dev_addr,
+    const uint8_t host_hid_idx,
     const uint8_t report_id,
     const uint8_t report_type,
     uint8_t const *report_data,
     const uint16_t report_data_len
 ) {
-    const hid_t *hid = hid_mgr_get_by_kvm_idx(kvm_hid_idx);
-    if (hid == nullptr)
-        return false;
-
     hid_action_set_report_t action_data = {
-        .dev_addr = hid->dev_addr,
-        .host_hid_idx = hid->host_hid_idx,
+        .dev_addr = dev_addr,
+        .host_hid_idx = host_hid_idx,
         .report_type = report_type,
         .report_id = report_id,
         .buffer_len = report_data_len,

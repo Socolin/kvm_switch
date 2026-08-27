@@ -8,8 +8,6 @@
 #include "utils.h"
 #include "hardware/gpio.h"
 #include "hardware/timer.h"
-#include "pico/bootrom.h"
-#include "pico/multicore.h"
 
 static uint16_t node_link_compute_transport_crc(const node_link_transport_header_t *transport_header);
 
@@ -18,6 +16,7 @@ static void node_link_init(
     spi_inst_t *spi
 ) {
     spi_init(spi, NODE_LINK_SPI_BAUD_RATE);
+    spi_set_format(spi, 8, SPI_CPOL_1, SPI_CPHA_1, SPI_MSB_FIRST);
     spi_set_slave(spi, !link->is_controller);
     link->spi = spi;
     link->baud_rate = NODE_LINK_SPI_BAUD_RATE;
@@ -176,6 +175,14 @@ static uint32_t node_link_prepare_tx_buffer(
     if (message == nullptr)
         return 0;
 
+    if (sizeof(message->header) + message->header.data_len > sizeof(link->tx_buffer)) {
+        logf_error("Data size exceeding tx_buffer size. data_len=%u, tx_buffer_size=%zu",
+                   message->header.data_len,
+                   sizeof(link->tx_buffer)
+        );
+        return 0;
+    }
+
     uint32_t message_length = 0;
     memcpy(link->tx_buffer, &message->header, sizeof(message->header));
 
@@ -185,6 +192,15 @@ static uint32_t node_link_prepare_tx_buffer(
     message_length += message->header.data_len;
     for (uint8_t i = 0; i < message->header.extra_data_count; i++) {
         const node_link_msg_extra_data_t *extra_data = &message->extra_data[i];
+
+        if (message_length + sizeof(extra_data->data_len) + extra_data->data_len > sizeof(link->tx_buffer)) {
+            logf_error("Extra data size exceeding tx_buffer size. data_len=%u, tx_buffer_size=%zu",
+                       message->header.data_len,
+                       sizeof(link->tx_buffer)
+            );
+            return 0;
+        }
+
         memcpy(link->tx_buffer + message_length, &extra_data->data_len, sizeof(extra_data->data_len));
         message_length += sizeof(extra_data->data_len);
         memcpy(link->tx_buffer + message_length, extra_data->data, extra_data->data_len);
@@ -202,10 +218,11 @@ static bool node_link_map_rx_buffer_to_message(
     memcpy(&message->header, link->rx_buffer, sizeof(message->header));
     message_length += sizeof(message->header);
 
-    // FIXME: make this safe, avoid overflow of rx_buffer
-    // same for tx_buffer function
-    if (message->header.data_len + sizeof(message->header) > sizeof(link->rx_buffer)) {
-        logf_error("Invalid message data length too long: %d", message->header.data_len);
+    if (message_length + message->header.data_len > sizeof(link->rx_buffer)) {
+        logf_warning("Data size exceeding rx_buffer size. data_len=%u, rx_buffer_size=%zu",
+                     message->header.data_len,
+                     sizeof(link->rx_buffer)
+        );
         return false;
     }
 
@@ -215,8 +232,21 @@ static bool node_link_map_rx_buffer_to_message(
     for (uint8_t i = 0; i < message->header.extra_data_count; i++) {
         node_link_msg_extra_data_t *extra_data = &message->extra_data[i];
 
+        if (message_length + sizeof(extra_data->data_len) > sizeof(link->rx_buffer)) {
+            logf_warning("Extra data size header exceeding rx_buffer size. message_length=%u", message_length);
+            return false;
+        }
+
         memcpy(&extra_data->data_len, link->rx_buffer + message_length, sizeof(extra_data->data_len));
         message_length += sizeof(extra_data->data_len);
+
+        if (message_length + extra_data->data_len > sizeof(link->rx_buffer)) {
+            logf_warning("Extra data size exceeding rx_buffer size. data_len=%u, message_length=%zu",
+                         extra_data->data_len,
+                         message_length
+            );
+            return false;
+        }
 
         extra_data->data = link->rx_buffer + message_length;
         extra_data->should_free_once_sent = false;
@@ -343,15 +373,24 @@ void node_link_drain_buffer(
     const node_link_t *link
 ) {
     // If this gpio is not set, the node is not reading
-    if (!gpio_get(link->spi_ready_gpio))
+    if (!gpio_get(link->spi_ready_gpio)) {
         return;
-
-    log_debug("Draining buffer");
+    }
 
     node_link_start_transaction(link);
-    while (!gpio_get(link->spi_ready_gpio))
+    while (gpio_get(link->spi_ready_gpio))
         spi_write_blocking(link->spi, link->drain_buffer, sizeof(link->drain_buffer));
     node_link_end_transaction(link);
+
+    log_warning("buffer drained");
+}
+
+void node_link_drain_rx(
+    const node_link_t *link
+) {
+    uint8_t b;
+    while (spi_is_readable(link->spi))
+        spi_read_blocking(link->spi, 0, &b, 1);
 }
 
 uint64_t node_link_get_us_delay_before_retry(

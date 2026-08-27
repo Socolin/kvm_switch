@@ -137,7 +137,7 @@ typedef struct __attribute__((packed)) {
 // ║               Logic              ║
 // ╚══════════════════════════════════╝
 
-typedef bool (*message_handler_t)(const node_link_msg_t *message, void *udata);
+typedef void (*message_handler_t)(const node_link_msg_t *message, void *udata);
 
 typedef struct {
     bool is_controller;
@@ -185,6 +185,10 @@ bool node_link_send_message_blocking(
 );
 
 void node_link_drain_buffer(
+    const node_link_t *link
+);
+
+void node_link_drain_rx(
     const node_link_t *link
 );
 

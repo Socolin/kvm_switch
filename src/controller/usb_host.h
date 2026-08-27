@@ -1,7 +1,7 @@
 #pragma once
+
 #include <stddef.h>
 #include <stdint.h>
-
 
 // ╔══════════════════════════════════╗
 // ║                Core              ║
@@ -42,20 +42,23 @@ typedef struct {
 } hid_action_t;
 
 /**
- * @param kvm_hid_idx The index of the HID interface in the KVM (Exposed to the computers)
+ * @param dev_addr Device address (Which port the device is connected. Values: 1, 2)
+ * @param host_hid_idx HID interface index on USB Host side (Where the keyboard / mouse are connected)
  * @param hid_protocol The HID protocol (boot / report) \see hid_protocol_mode_enum_t
  * @return
  *   - **true**: if the message was enqueued successfully
  *   - **false**: otherwise
  */
 bool usb_host_enqueue_set_protocol(
-    uint8_t kvm_hid_idx,
+    uint8_t dev_addr,
+    uint8_t host_hid_idx,
     uint8_t hid_protocol
 );
 
 /**
  * Mainly used to update the keyboard LEDs (NUM LOCK, CAPS LOCK, ...)
- * @param kvm_hid_idx The index of the HID interface in the KVM (Exposed to the computers)
+ * @param dev_addr Device address (Which port the device is connected. Values: 1, 2)
+ * @param host_hid_idx HID interface index on USB Host side (Where the keyboard / mouse are connected)
  * @param report_id HID report ID
  * @param report_type \see hid_report_type_t
  * @param report_data The HID report data
@@ -65,7 +68,8 @@ bool usb_host_enqueue_set_protocol(
  *   - **false**: otherwise
  */
 bool usb_host_enqueue_set_report(
-    uint8_t kvm_hid_idx,
+    uint8_t dev_addr,
+    uint8_t host_hid_idx,
     uint8_t report_id,
     uint8_t report_type,
     uint8_t const *report_data,
