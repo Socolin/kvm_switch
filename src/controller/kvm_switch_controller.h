@@ -84,7 +84,7 @@ typedef struct {
 
 typedef struct __attribute__((packed)) {
     const uint8_t dev_addr; /**< Device address (Which port the device is connected. Values: 1, 2) */
-    const uint8_t host_hid_idx;; /**< HID interface index on USB Host side (Where the keyboard / mouse are connected) */
+    const uint8_t host_hid_idx; /**< HID interface index on USB Host side (Where the keyboard / mouse are connected) */
     const uint8_t itf_protocol; /**< Interface protocol \see hid_interface_protocol_enum_t */
     const uint8_t hid_protocol; /**< HID protocol (boot / report) \see hid_protocol_mode_enum_t */
     const uint8_t report_id; /**< The report ID if any. 0 = no report id */

@@ -48,7 +48,7 @@ typedef enum {
 typedef struct {
     kvm_switch_node_action_opcode_t opcode;
     uint8_t data[128];
-    size_t data_len;
+    uint32_t data_len;
 } kvm_switch_action_t;
 
 typedef struct __attribute__((packed)) {

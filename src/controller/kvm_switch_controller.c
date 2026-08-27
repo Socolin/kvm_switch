@@ -39,6 +39,30 @@ void kvm_switch_controller_init() {
     queue_init(&kvm_switch.action_queue, sizeof(kvm_switch_action_t), 32);
 }
 
+static void kvm_switch_ctrl_set_active_computer(
+    const uint8_t computer_id
+) {
+    logf_info("KVM Switch: Setting active computer to %u", computer_id);
+    kvm_switch.active_computer_id = computer_id;
+
+    const computer_t *computer = computer_manager_get_computer(computer_id);
+    for (uint8_t kvm_hid_idx = 0; kvm_hid_idx < CFG_TUH_HID; kvm_hid_idx++) {
+        usb_host_enqueue_set_protocol(kvm_hid_idx, computer->hid_protocol_per_interface[kvm_hid_idx]);
+
+        const computer_hid_report_t *report = computer->hid_reports_per_interface[kvm_hid_idx];
+        while (report != nullptr) {
+            usb_host_enqueue_set_report(
+                kvm_hid_idx,
+                report->report_id,
+                report->report_type,
+                report->report_data,
+                report->report_data_len
+            );
+            report = report->next;
+        }
+    }
+}
+
 static void kvm_switch_process_actions() {
     kvm_switch_action_t kvm_switch_action;
     if (queue_try_remove(&kvm_switch.action_queue, &kvm_switch_action)) {
@@ -79,13 +103,50 @@ static void kvm_switch_process_actions() {
             case KVM_SWITCH_CONTROLLER_OP_HID_REPORT: {
                 const ksc_action_hid_report_data_t *data = (ksc_action_hid_report_data_t *) kvm_switch_action.data;
 
+
+                if (data->itf_protocol == HID_ITF_PROTOCOL_KEYBOARD) {
+                    bool scroll_lock_pressed = false;
+                    bool key_1_pressed = false;
+                    bool key_2_pressed = false;
+                    int key_pressed_count = 0;
+
+                    for (int i = 2; i < data->report_data_len; i++) {
+                        if (data->report_data[i] != 0) {
+                            key_pressed_count++;
+                        }
+                        scroll_lock_pressed |= data->report_data[i] == 0x47;
+                        key_1_pressed |= data->report_data[i] == 0x1e;
+                        key_2_pressed |= data->report_data[i] == 0x1f;
+                    }
+                    logf_debug("key_pressed_count: %d scroll_lock_pressed: %d key_1_pressed: %d key_2_pressed: %d",
+                               key_pressed_count, scroll_lock_pressed, key_1_pressed, key_2_pressed);
+                    if (key_pressed_count == 2) {
+                        if (scroll_lock_pressed && key_1_pressed) {
+                            kvm_switch_ctrl_set_active_computer(0);
+                        } else if (scroll_lock_pressed && key_2_pressed) {
+                            kvm_switch_ctrl_set_active_computer(1);
+                        }
+                        return;
+                    }
+                }
+
                 const hid_t *hid = hid_mgr_get_by_host_idx(data->dev_addr, data->host_hid_idx);
                 if (hid == nullptr) {
                     logf_warning("hid_mgr_get_by_host_idx returned nullptr dev_addr: %u host_hid_idx: %u",
                                  data->dev_addr, data->host_hid_idx);
                     return;
                 }
-                usb_device_send_report(hid->kvm_hid_idx, data->report_id, data->report_data, data->report_data_len);
+                if (kvm_switch.active_computer_id == 0) {
+                    usb_device_send_report(hid->kvm_hid_idx, data->report_id, data->report_data, data->report_data_len);
+                } else {
+                    node_link_ctrl_enqueue_send_report(
+                        kvm_switch.active_computer_id,
+                        hid->kvm_hid_idx,
+                        data->report_id,
+                        data->report_data,
+                        data->report_data_len
+                    );
+                }
                 break;
             }
             case KVM_SWITCH_CONTROLLER_OP_COMPUTER_READY: {
@@ -197,7 +258,7 @@ bool kvm_switch_controller_enqueue_device_mount(
     };
 
     return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_DEVICE_MOUNT, &action_data,
-                                                sizeof(action_data));
+                                          sizeof(action_data));
 }
 
 bool kvm_switch_controller_enqueue_device_umount(
@@ -208,7 +269,7 @@ bool kvm_switch_controller_enqueue_device_umount(
     };
 
     return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_DEVICE_UMOUNT, &action_data,
-                                                sizeof(action_data));
+                                          sizeof(action_data));
 }
 
 bool kvm_switch_controller_enqueue_hid_mount(
@@ -297,6 +358,5 @@ bool kvm_switch_controller_enqueue_computer_ready(
     const ksc_action_computer_rdy_data_t action_data = {
         .computer_id = computer_id,
     };
-    return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_COMPUTER_READY, &action_data,
-                                                sizeof(action_data));
+    return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_COMPUTER_READY, &action_data, sizeof(action_data));
 }

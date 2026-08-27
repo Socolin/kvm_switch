@@ -60,7 +60,7 @@ int main() {
 
     stdio_init_all();
 
-    logger_init(LOG_LEVEL_DEBUG, LOG_LEVEL_DEBUG);
+    logger_init(LOG_LEVEL_DEBUG, LOG_LEVEL_INFO);
 
     log_info("KVM node is starting");
     logf_info("Version: %s", BUILD_DATE);

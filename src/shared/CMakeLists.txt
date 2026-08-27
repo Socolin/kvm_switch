@@ -1,3 +1,4 @@
+add_compile_options(-Wall -Wextra)
 add_library(shared
         logger.c
         crc.c

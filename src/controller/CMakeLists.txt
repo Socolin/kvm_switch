@@ -1,3 +1,4 @@
+add_compile_options(-Wall -Wextra)
 add_executable(kvm_controller
         # can use 'tinyusb_pico_pio_usb' library later when pico-sdk is updated
         ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c

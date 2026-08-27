@@ -93,7 +93,6 @@ static bool kvm_switch_node_enqueue_action(
     const kvm_switch_node_action_opcode_t opcode,
     const void *data,
     const size_t data_len
-
 ) {
     logf_debug("opcode: %u, data_len: %u", opcode, data_len);
     kvm_switch_action_t action = {
