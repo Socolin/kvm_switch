@@ -135,7 +135,8 @@ void log_write(
         .func_len = strlen(func),
         .message_len = message_len,
     };
-    logger_t *logger = &default_logger[get_core_num()];
+    const uint core_id = get_core_num();
+    logger_t *logger = &default_logger[core_id];
     if (logger->min_log_level <= log_level) {
         write_bytes_to_log_buffer(logger, (const uint8_t *) &log, sizeof(log));
         write_bytes_to_log_buffer(logger, (const uint8_t *) func, log.func_len);
@@ -143,10 +144,10 @@ void log_write(
     }
     if (logger->immediate_log_min_log_level <= log_level) {
 #if LOG_COLOR
-        printf("[%llu][%s][%s:%u] %.*s\n", log.timestamp, log_level_with_color_to_string(log_level), func, log.line, message_len,
+        printf("[%d][%llu][%s][%s:%u] %.*s\n", core_id, log.timestamp, log_level_with_color_to_string(log_level), func, log.line, message_len,
                message);
 #else
-        printf("[%llu][%s][%s:%u] %.*s\n", log.timestamp, log_level_to_string(log_level), func, log.line, message_len, message);
+        printf("[%d][%llu][%s][%s:%u] %.*s\n", core_id, log.timestamp, log_level_to_string(log_level), func, log.line, message_len, message);
 #endif
     }
 }
@@ -222,7 +223,8 @@ void log_write_format(
         .line = line,
         .message_len = message_len,
     };
-    logger_t *logger = &default_logger[get_core_num()];
+    const uint core_id = get_core_num();
+    logger_t *logger = &default_logger[core_id];
     if (logger->min_log_level <= log_level) {
         write_bytes_to_log_buffer(logger, (const uint8_t *) &log, sizeof(log));
         write_bytes_to_log_buffer(logger, (const uint8_t *) func, log.func_len);
@@ -230,10 +232,10 @@ void log_write_format(
     }
     if (logger->immediate_log_min_log_level <= log_level) {
 #if LOG_COLOR
-        printf("[%llu][%s][%s:%u] %.*s\n", log.timestamp, log_level_with_color_to_string(log_level), func, line, message_len,
+        printf("[%d][%llu][%s][%s:%u] %.*s\n", core_id, log.timestamp, log_level_with_color_to_string(log_level), func, line, message_len,
                message_buffer);
 #else
-        printf("[%llu][%s][%s:%u] %.*s\n", log.timestamp, log_level_to_string(log_level), func, log.line, message_len,
+        printf("[%d][%llu][%s][%s:%u] %.*s\n", core_id, log.timestamp, log_level_to_string(log_level), func, log.line, message_len,
                message_buffer);
 #endif
     }
