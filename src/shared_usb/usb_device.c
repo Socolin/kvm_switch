@@ -343,6 +343,7 @@ uint8_t const *tud_hid_descriptor_report_cb(
 void tud_mount_cb() {
     logf_debug("device mounted");
 
+    usb_device.usb_device_mounted_cb();
     for (uint8_t kvm_hid_idx = 0; kvm_hid_idx < hid_mgr_get_max_hid_count(); kvm_hid_idx++) {
         const hid_t *hid = hid_mgr_get_by_kvm_idx(kvm_hid_idx);
         if (hid == nullptr) {
@@ -358,7 +359,6 @@ void tud_mount_cb() {
         usb_device.set_computer_hid_protocol_cb(kvm_hid_idx, hid_protocol);
     }
     usb_device.connected = true;
-    usb_device.usb_device_mounted_cb();
 
     log_info("USB device mounted (plugged in a computer)");
 }

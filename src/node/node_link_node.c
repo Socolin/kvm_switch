@@ -120,7 +120,6 @@ void node_link_node_run() {
             if (!node_link_send_message_blocking(&node.link, &message, nullptr)) {
                 // When a transmission happen, wait before trying again so the host can timeout and will not
                 // catch mid transmission data during next retry
-                node_link_drain_rx(&node.link);
                 log_warning("Transmission failed, waiting before retrying");
                 sleep_us(delay_before_retry_after_error + 1'000);
             } else {

@@ -98,7 +98,6 @@ void node_link_ctrl_task() {
         node_link_msg_t message;
         if (queue_try_peek(&computer->message_queue, &message)) {
             if (!node_link_send_message_blocking(&ctrl.link, &message, &computer_id)) {
-                node_link_drain_rx(&ctrl.link);
                 node_link_drain_buffer(&ctrl.link);
             } else {
                 queue_remove_blocking(&computer->message_queue, nullptr);
@@ -106,7 +105,6 @@ void node_link_ctrl_task() {
             }
         } else if (data_available) {
             if (!node_link_send_message_blocking(&ctrl.link, nullptr, &computer_id)) {
-                node_link_drain_rx(&ctrl.link);
                 node_link_drain_buffer(&ctrl.link);
             }
         }

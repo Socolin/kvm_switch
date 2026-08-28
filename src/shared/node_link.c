@@ -112,6 +112,10 @@ static bool node_link_write_read_blocking(
     uint8_t *rx_buffer,
     const size_t len
 ) {
+    // Drain any pending data from the SPI RX FIFO.
+    // Sometimes it seems some bytes are left and it's breaking all following transactions. (not sure what is happening)
+    node_link_drain_rx(link);
+
     if (link->is_controller) {
         if (!wait_for_spi_ready(link->spi_ready_gpio))
             return false;
@@ -372,6 +376,8 @@ static uint16_t node_link_compute_transport_crc(
 void node_link_drain_buffer(
     const node_link_t *link
 ) {
+    node_link_drain_rx(link);
+
     // If this gpio is not set, the node is not reading
     if (!gpio_get(link->spi_ready_gpio)) {
         return;

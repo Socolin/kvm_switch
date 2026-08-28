@@ -144,7 +144,7 @@ static void kvm_switch_process_actions() {
                                  data->dev_addr, data->host_hid_idx);
                     return;
                 }
-                if (kvm_switch.active_computer_id == 0) {
+                if (kvm_switch.active_computer_id == LOCAL_COMPUTER_ID) {
                     usb_device_send_report(hid->kvm_hid_idx, data->report_id, data->report_data, data->report_data_len);
                 } else {
                     node_link_ctrl_enqueue_send_report(
