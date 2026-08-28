@@ -7,6 +7,8 @@
 
 void node_link_ctrl_init();
 
+void node_link_ctrl_restart_nodes();
+
 void node_link_ctrl_task();
 
 // ╔══════════════════════════════════╗

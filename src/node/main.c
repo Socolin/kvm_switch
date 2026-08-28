@@ -1,4 +1,4 @@
-#include "pico_utils.h"
+#include "quick_reset_button.h"
 #if !PICO_RP2350
 #error "This targets the Pico 2 (RP2350) only"
 #endif
@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "hardware/clocks.h"
-#include "hardware/gpio.h"
 #include "hardware/watchdog.h"
 #include "pico/multicore.h"
 #include "pico/stdio.h"
@@ -21,25 +20,6 @@
 #ifndef BUILD_DATE
 #define BUILD_DATE "No date"
 #endif
-
-#define QUICK_RESET_GPIO 28
-
-static void irq_handler(
-    const uint gpio,
-    const uint32_t event_mask
-) {
-    if (gpio == QUICK_RESET_GPIO && event_mask == GPIO_IRQ_EDGE_FALL) {
-        reboot_in_bootsel();
-    }
-}
-
-static void quick_reset_button_init() {
-    gpio_init(QUICK_RESET_GPIO);
-    gpio_set_dir(QUICK_RESET_GPIO, GPIO_IN);
-    gpio_pull_up(QUICK_RESET_GPIO);
-
-    gpio_set_irq_enabled_with_callback(QUICK_RESET_GPIO, GPIO_IRQ_EDGE_FALL, true, irq_handler);
-}
 
 static void core1_main() {
     log_debug("Starting node_link loop core 1");

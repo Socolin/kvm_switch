@@ -7,6 +7,7 @@
 #include "hardware/gpio.h"
 
 #include "computer_manager.h"
+#include "gpio_utils.h"
 #include "hid_manager.h"
 #include "kvm_switch_controller.h"
 #include "logger.h"
@@ -14,6 +15,7 @@
 
 typedef struct {
     node_link_t link;
+    bool node_ready[MAX_COMPUTER];
 } node_link_ctrl_t;
 
 static node_link_ctrl_t ctrl;
@@ -37,6 +39,51 @@ void node_link_ctrl_init() {
     }
 
     node_link_init_controller(&ctrl.link, spi0, node_link_ctrl_process_received_message);
+}
+
+#define RUN_NODES_GPIO 22
+
+static void node_link_ctrl_irq_handler(
+    [[maybe_unused]] uint gpio,
+    [[maybe_unused]] uint32_t event_mask,
+    const void *user_data
+) {
+    const computer_t *computer = user_data;
+    if (event_mask & GPIO_IRQ_EDGE_RISE) {
+        ctrl.node_ready[computer->computer_id] = true;
+    }
+}
+
+void node_link_ctrl_restart_nodes() {
+    log_info("Restarting nodes to be ready");
+    for (int i = 1; i < MAX_COMPUTER; i++) {
+        const computer_t *computer = computer_manager_get_computer(i);
+        ctrl.node_ready[i] = false;
+        gpio_util_set_handler(computer->spi_ready_gpio, GPIO_IRQ_EDGE_RISE, node_link_ctrl_irq_handler, computer);
+    }
+
+    gpio_init(RUN_NODES_GPIO);
+    gpio_set_dir(RUN_NODES_GPIO, GPIO_OUT);
+    sleep_us(10);
+    gpio_set_dir(RUN_NODES_GPIO, GPIO_IN);
+
+    log_info("Waiting for nodes to be ready..");
+    for (int i = 1; i < MAX_COMPUTER; i++) {
+        const uint64_t wait_start = time_us_64();
+        while (!ctrl.node_ready[i]) {
+            if (time_us_64() - wait_start > 3'000'000) {
+                logf_error("Timeout waiting for node %d to be ready", i);
+                break;
+            }
+            tight_loop_contents();
+        }
+    }
+    for (int i = 1; i < MAX_COMPUTER; i++) {
+        const computer_t *computer = computer_manager_get_computer(i);
+        gpio_util_clear_handler(computer->spi_ready_gpio);
+    }
+
+    log_info("All nodes are ready");
 }
 
 static void node_link_ctrl_process_received_message(

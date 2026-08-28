@@ -1,4 +1,5 @@
 #include "pico_utils.h"
+#include "quick_reset_button.h"
 #if !PICO_RP2350
 #error "This targets the Pico 2 (RP2350) only"
 #endif
@@ -23,25 +24,6 @@
 #define BUILD_DATE "No date"
 #endif
 
-#define QUICK_RESET_GPIO 28
-
-static void irq_handler(
-    const uint gpio,
-    const uint32_t event_mask
-) {
-    if (gpio == QUICK_RESET_GPIO && event_mask == GPIO_IRQ_EDGE_FALL) {
-        reboot_in_bootsel();
-    }
-}
-
-static void quick_reset_button_init() {
-    gpio_init(QUICK_RESET_GPIO);
-    gpio_set_dir(QUICK_RESET_GPIO, GPIO_IN);
-    gpio_pull_up(QUICK_RESET_GPIO);
-
-    gpio_set_irq_enabled_with_callback(QUICK_RESET_GPIO, GPIO_IRQ_EDGE_FALL, true, irq_handler);
-}
-
 static void core1_main() {
     log_info("Starting USB Host on core 1");
 
@@ -54,16 +36,6 @@ static void core1_main() {
     while (true) {
         usb_host_task();
     }
-}
-
-#define RUN_NODES_GPIO 22
-
-static void restart_kvm_nodes() {
-    gpio_init(RUN_NODES_GPIO);
-    gpio_set_dir(RUN_NODES_GPIO, GPIO_OUT);
-    sleep_us(10);
-    gpio_set_dir(RUN_NODES_GPIO, GPIO_IN);
-    sleep_ms(50);
 }
 
 static void on_usb_device_set_report(
@@ -108,7 +80,6 @@ int main() {
     logger_init(LOG_LEVEL_DEBUG, LOG_LEVEL_INFO);
 
     quick_reset_button_init();
-    restart_kvm_nodes();
 
     log_info("KVM controller is starting");
     logf_info("Version: %s", BUILD_DATE);
@@ -138,6 +109,9 @@ int main() {
     board_init_after_tusb();
 
     log_info("KVM Core ready");
+
+    log_debug("Restarting KVM nodes and waiting for themn to be up");
+    node_link_ctrl_restart_nodes();
 
     log_debug("Starting main loop on core 0");
 

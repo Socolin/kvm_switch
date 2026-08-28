@@ -1,10 +1,12 @@
 add_compile_options(-Wall -Wextra)
 add_library(shared
         crc.c
+        gpio_utils.c
         hid_manager.c
         logger.c
         node_link.c
         pico_utils.c
+        quick_reset_button.c
         report_descriptor.c
         utils.c
 )
@@ -17,4 +19,5 @@ target_include_directories(shared
 target_link_libraries(shared
         pico_stdlib
         hardware_spi
+        hardware_gpio
 )
