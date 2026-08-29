@@ -1,3 +1,6 @@
 [submodule "Pico-PIO-USB"]
 	path = Pico-PIO-USB
 	url = https://github.com/sekigon-gonnoc/Pico-PIO-USB.git
+[submodule "test/unity"]
+	path = test/unity
+	url = git@github.com:ThrowTheSwitch/Unity.git

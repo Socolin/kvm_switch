@@ -9,7 +9,7 @@
 static void button_pressed(
     [[maybe_unused]] uint gpio,
     [[maybe_unused]] uint32_t event_mask,
-    [[maybe_unused]] void *user_data
+    [[maybe_unused]] const void *user_data
 ) {
     reboot_in_bootsel();
 }

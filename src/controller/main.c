@@ -1,5 +1,3 @@
-#include "pico_utils.h"
-#include "quick_reset_button.h"
 #if !PICO_RP2350
 #error "This targets the Pico 2 (RP2350) only"
 #endif
@@ -15,9 +13,11 @@
 
 #include "computer_manager.h"
 #include "hid_manager.h"
+#include "kvm_switch_config.h"
 #include "kvm_switch_controller.h"
 #include "logger.h"
 #include "node_link_ctrl.h"
+#include "quick_reset_button.h"
 #include "usb_host.h"
 
 #ifndef BUILD_DATE
@@ -89,6 +89,7 @@ int main() {
     computer_manager_configure_computer(1, 6, 7, 8);
 
     hid_mgr_init();
+    kvm_config_init();
     kvm_switch_controller_init();
     node_link_ctrl_init();
 

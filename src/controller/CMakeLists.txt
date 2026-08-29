@@ -7,6 +7,7 @@ add_executable(kvm_controller
         main.c
         computer_manager.c
         node_link_ctrl.c
+        kvm_switch_config.c
         kvm_switch_controller.c
         usb_host.c
         ../shared_usb/usb_device.c
