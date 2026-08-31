@@ -1,0 +1,18 @@
+# AI-Generated
+# Physical range and a negative Unit Exponent.
+# Unit Exponent is a 4 bit two's complement nibble: 0x0F means -1, not 15.
+# Physical Minimum is sign extended the same way as Logical Minimum.
+05 01 # Usage Page (Generic Desktop),
+09 0E # Usage (System Multi-Axis Controller),
+A1 01 # Collection (Application),
+09 37 #     Usage (Dial),
+15 81 #     Logical Minimum (-127),
+25 7F #     Logical Maximum (127),
+35 81 #     Physical Minimum (-127),
+45 7F #     Physical Maximum (127),
+55 0F #     Unit Exponent (-1),
+66 14 00 #  Unit (0x0014, English rotation: degrees),
+75 08 #     Report Size (8),
+95 01 #     Report Count (1),
+81 06 #     Input (Data, Variable, Relative),
+C0    # End Collection

@@ -422,3 +422,5 @@ void tud_hid_set_protocol_cb(
 
     usb_device.set_computer_hid_protocol_cb(kvm_hid_idx, hid_protocol);
 }
+
+// FIXME: tud_hid_set_idle_cb ?

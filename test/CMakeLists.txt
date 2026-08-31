@@ -7,7 +7,12 @@ add_executable(test_shared
         shared/test_report_descriptor.c
         ${CMAKE_SOURCE_DIR}/../src/shared/report_descriptor.c
         ${CMAKE_SOURCE_DIR}/unity/src/unity.c
+        test_utils/test_utils_string.c
+        test_utils/string_diff.c
+        test_utils/test_utils_file.c
 )
+target_compile_definitions(test_shared PRIVATE
+        TEST_SRC_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 target_include_directories(test_shared PRIVATE
         ${CMAKE_SOURCE_DIR}/../src/shared
         ${CMAKE_SOURCE_DIR}/unity/src

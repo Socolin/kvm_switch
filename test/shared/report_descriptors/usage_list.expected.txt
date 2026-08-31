@@ -1,0 +1,13 @@
+Collections:
+  [0] Application, UsagePage: 1, Usage: 5, Parent: -1
+Report 0:
+  Report ID: 0
+  Report Type: Input
+  Fields:
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 1, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 2, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 2, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 2, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 0, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 0, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 2, Collection: 0, UsagePage: 0, Usage: 0, Logical Minimum: 0, Logical Maximum: 0, Flags: 0x03 (Constant,Variable,Absolute)

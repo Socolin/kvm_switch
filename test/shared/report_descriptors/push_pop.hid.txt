@@ -1,0 +1,30 @@
+# AI-Generated
+# Push / Pop of the global item state.
+#
+# Push saves a *copy* of the current global state, it does not reset it. The
+# pushed scope below only re-declares Usage Page / Report Size / Report Count,
+# so Report ID (1) and Logical Maximum (1023) must be inherited into it: the
+# Consumer field belongs to report 1, not to a second report with ID 0.
+#
+# Pop then restores Usage Page (7) and Report Size (1), neither of which is
+# re-declared after it.
+05 01 # Usage Page (Generic Desktop),
+09 06 # Usage (Keyboard),
+A1 01 # Collection (Application),
+85 01 #     Report ID (1),
+05 07 #     Usage Page (Key Codes),
+15 00 #     Logical Minimum (0),
+26 FF 03 #  Logical Maximum (1023),
+75 01 #     Report Size (1),
+A4    #     Push,
+05 0C #         Usage Page (Consumer),
+75 10 #         Report Size (16),
+95 01 #         Report Count (1),
+09 E9 #         Usage (Volume Increment),
+81 02 #         Input (Data, Variable, Absolute),
+B4    #     Pop,
+95 08 #     Report Count (8),
+19 E0 #     Usage Minimum (224),
+29 E7 #     Usage Maximum (231),
+81 02 #     Input (Data, Variable, Absolute),
+C0    # End Collection

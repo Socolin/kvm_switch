@@ -1,0 +1,18 @@
+# AI-Generated
+# 4 byte Usage items carry their own Usage Page in the high 16 bits and must
+# override the global Usage Page (Generic Desktop) for those fields only.
+# The trailing 2 byte Usage falls back to the global Usage Page again.
+05 01 # Usage Page (Generic Desktop),
+09 06 # Usage (Keyboard),
+A1 01 # Collection (Application),
+15 00 #     Logical Minimum (0),
+25 01 #     Logical Maximum (1),
+75 01 #     Report Size (1),
+95 02 #     Report Count (2),
+0B E9 00 0C 00 #     Usage (Consumer/Volume Increment),
+0B EA 00 0C 00 #     Usage (Consumer/Volume Decrement),
+81 02 #     Input (Data, Variable, Absolute),
+95 01 #     Report Count (1),
+09 80 #     Usage (System Control),
+81 02 #     Input (Data, Variable, Absolute),
+C0    # End Collection

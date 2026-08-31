@@ -1,0 +1,18 @@
+# AI-Generated
+# 20 explicitly declared Usages before a single Input item.
+# MAX_USAGES must be large enough to hold them, and the bound check must not
+# write one past the end of the usages[] array.
+05 01 # Usage Page (Generic Desktop),
+09 05 # Usage (Game Pad),
+A1 01 # Collection (Application),
+05 09 #     Usage Page (Button),
+15 00 #     Logical Minimum (0),
+25 01 #     Logical Maximum (1),
+75 01 #     Report Size (1),
+95 14 #     Report Count (20),
+09 01 09 02 09 03 09 04 09 05 #     Usage (Button 1-5),
+09 06 09 07 09 08 09 09 09 0A #     Usage (Button 6-10),
+09 0B 09 0C 09 0D 09 0E 09 0F #     Usage (Button 11-15),
+09 10 09 11 09 12 09 13 09 14 #     Usage (Button 16-20),
+81 02 #     Input (Data, Variable, Absolute),
+C0    # End Collection

@@ -1,0 +1,63 @@
+05 01 # Usage Page (Generic Desktop),
+09 06 # Usage (Keyboard),
+A1 01 # Collection (Application),
+05 07 #     Usage Page (Key Codes);
+19 E0 #     Usage Minimum (224),
+29 E7 #     Usage Maximum (231),
+15 00 #     Logical Minimum (0),
+25 01 #     Logical Maximum (1),
+75 01 #     Report Size (1),
+95 08 #     Report Count (8),
+81 02 #     Input (Data, Variable, Absolute),
+95 01 #     Report Count (1),
+75 08 #     Report Size (8),
+81 01 #     Input (Constant),
+95 05 #     Report Count (5),
+75 01 #     Report Size (1),
+05 08 #     Usage Page (Page# for LEDs),
+19 01 #     Usage Minimum (1),
+29 05 #     Usage Maximum (5),
+91 02 #     Output (Data, Variable, Absolute),
+95 01 #     Report Count (1),
+75 03 #     Report Size (3),
+91 01 #     Output (Constant),
+95 06 #     Report Count (6),
+75 08 #     Report Size (8),
+15 00 #     Logical Minimum (0),
+25 65 #     Logical Maximum(101),
+05 07 #     Usage Page (Key Codes),
+19 00 #     Usage Minimum (0),
+29 65 #     Usage Maximum (101),
+81 00 #     Input (Data, Array),
+C0    # End Collection
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

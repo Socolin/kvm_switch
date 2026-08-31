@@ -1,0 +1,26 @@
+Collections:
+  [0] Application, UsagePage: 1, Usage: 5, Parent: -1
+Report 0:
+  Report ID: 0
+  Report Type: Input
+  Fields:
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 1, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 2, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 3, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 4, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 5, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 6, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 7, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 8, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 9, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 10, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 11, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 12, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 13, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 14, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 15, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 16, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 17, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 18, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 19, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)
+    Bits: 1, Collection: 0, UsagePage: 9, Usage: 20, Logical Minimum: 0, Logical Maximum: 1, Flags: 0x02 (Data,Variable,Absolute)

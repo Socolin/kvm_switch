@@ -1,0 +1,7 @@
+Collections:
+  [0] Application, UsagePage: 1, Usage: 14, Parent: -1
+Report 0:
+  Report ID: 0
+  Report Type: Input
+  Fields:
+    Bits: 8, Collection: 0, UsagePage: 1, Usage: 55, Logical Minimum: -127, Logical Maximum: 127, Physical Minimum: -127, Physical Maximum: 127, Unit Exponent: -1, Unit: 0x14, Flags: 0x06 (Data,Variable,Relative)

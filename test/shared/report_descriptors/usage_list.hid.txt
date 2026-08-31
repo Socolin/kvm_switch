@@ -1,0 +1,23 @@
+# AI-Generated
+# Report Count larger than the number of declared Usages.
+# Per HID 1.11 6.2.2.8 the last declared Usage is repeated for every remaining
+# field, so the 4 buttons are Usage 1, 2, 2, 2 (not 1, 2, 0, 0).
+# The second Input item declares no Usage at all: every field keeps Usage 0
+# while still inheriting the global Usage Page.
+05 01 # Usage Page (Generic Desktop),
+09 05 # Usage (Game Pad),
+A1 01 # Collection (Application),
+05 09 #     Usage Page (Button),
+15 00 #     Logical Minimum (0),
+25 01 #     Logical Maximum (1),
+75 01 #     Report Size (1),
+95 04 #     Report Count (4),
+09 01 #     Usage (1),
+09 02 #     Usage (2),
+81 02 #     Input (Data, Variable, Absolute),
+95 02 #     Report Count (2),
+81 02 #     Input (Data, Variable, Absolute),
+95 02 #     Report Count (2),
+75 01 #     Report Size (1),
+81 03 #     Input (Constant, Variable, Absolute),
+C0    # End Collection
