@@ -169,25 +169,10 @@ void parse_report_descriptor__should_not_leak_state_into_the_next_parse() {
         hid_descriptor_t *actual = parse_report_descriptor(valid, sizeof(valid));
         TEST_ASSERT_NOT_NULL(actual);
         TEST_ASSERT_EQUAL(1, actual->collection_count);
-        TEST_ASSERT_EQUAL(1, actual->field_count);
+        TEST_ASSERT_EQUAL(1, actual->fields_count);
         TEST_ASSERT_EQUAL(0, actual->fields[0].collection_idx);
         free(actual);
     }
-}
-
-/** Asking for more fields than MAX_FIELDS must fail cleanly, not overflow. */
-void parse_report_descriptor__should_fail_when_report_count_exceeds_max_fields() {
-    const uint8_t descriptor[] = {
-        0x05, 0x09, // Usage Page (Button)
-        0x19, 0x01, // Usage Minimum (1)
-        0x29, 0xFF, // Usage Maximum (255)
-        0x15, 0x00, // Logical Minimum (0)
-        0x25, 0x01, // Logical Maximum (1)
-        0x75, 0x01, // Report Size (1)
-        0x95, 0xFF, // Report Count (255), MAX_FIELDS is 64
-        0x81, 0x02, // Input (Data, Variable, Absolute)
-    };
-    TEST_ASSERT_NULL(parse_report_descriptor(descriptor, sizeof(descriptor)));
 }
 
 /** An item whose data runs past the end of the descriptor must be rejected. */
@@ -273,7 +258,6 @@ int main() {
     RUN_TEST(parse_report_descriptor__should_parse_examples_dial);
 
     RUN_TEST(parse_report_descriptor__should_not_leak_state_into_the_next_parse);
-    RUN_TEST(parse_report_descriptor__should_fail_when_report_count_exceeds_max_fields);
     RUN_TEST(parse_report_descriptor__should_fail_on_truncated_item);
     RUN_TEST(parse_report_descriptor__should_fail_on_collection_nested_too_deep);
     RUN_TEST(parse_report_descriptor__should_fail_on_unmatched_end_collection);

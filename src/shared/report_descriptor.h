@@ -19,7 +19,7 @@ typedef struct {
     int32_t max;
 } hid_range_t;
 
-typedef struct {
+typedef struct __attribute((packed)) {
     union {
         hid_report_main_item_flags_t parsed_flags;
         uint32_t flags;
@@ -46,12 +46,12 @@ typedef struct {
     int8_t collection_idx;
 } hid_field_t;
 
-typedef struct {
+typedef struct __attribute((packed)) {
     uint8_t report_id;
     hid_report_type_t report_type;
 
-    uint8_t field_indices[MAX_FIELDS];
-    uint8_t field_count;
+    uint16_t field_count;
+    uint16_t *field_indices;
 } hid_report_t;
 
 typedef enum {
@@ -64,22 +64,25 @@ typedef enum {
     HID_COLL_USAGE_MODIFIER,
 } hid_collection_type_t;
 
-typedef struct {
+typedef struct __attribute((packed)) {
     uint16_t usage_page;
     uint16_t usage;
     hid_collection_type_t type;
     int8_t parent_idx;
 } hid_collection_t;
 
-typedef struct {
-    uint8_t field_count;
-    hid_field_t fields[MAX_FIELDS];
-
+typedef struct __attribute((packed)) {
+    uint16_t fields_count;
+    uint16_t max_fields;
     uint8_t collection_count;
-    hid_collection_t collections[MAX_COLLECTIONS];
-
+    uint8_t max_collections;
+    uint8_t max_reports;
     uint8_t report_count;
-    hid_report_t reports[MAX_REPORTS];
+    uint16_t max_field_per_report;
+
+    hid_field_t *fields;
+    hid_collection_t *collections;
+    hid_report_t *reports;
 } hid_descriptor_t;
 
 
