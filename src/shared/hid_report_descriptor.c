@@ -1,4 +1,4 @@
-#include "report_descriptor.h"
+#include "hid_report_descriptor.h"
 
 #include <assert.h>
 #include <inttypes.h>
@@ -61,6 +61,31 @@ typedef struct {
     uint32_t udata;
 } hid_raw_short_item_t;
 
+typedef enum {
+    HID_ITEM_PARSE_EOF,
+    HID_ITEM_PARSE_SUCCESS,
+    HID_ITEM_PARSE_ERROR
+} item_parse_result_t;
+
+typedef struct {
+    uint16_t field_count;
+    uint16_t max_field_per_report;
+    uint8_t collection_count;
+    uint8_t report_count;
+} hid_descriptor_summary_t;
+
+typedef enum {
+    HID_REPORT_TYPE_INPUT,
+    HID_REPORT_TYPE_OUTPUT,
+    HID_REPORT_TYPE_FEATURE,
+} hid_report_type_t;
+
+typedef struct {
+    uint8_t report_id;
+    hid_report_type_t report_type;
+    size_t field_count;
+} hid_report_definition_t;
+
 
 static int32_t parse_signed_item_value(
     const uint8_t *data,
@@ -81,12 +106,9 @@ static uint32_t parse_unsigned_item_value(
     return le32toh(udata);
 }
 
-typedef enum  {
-    HID_ITEM_PARSE_EOF,
-    HID_ITEM_PARSE_SUCCESS,
-    HID_ITEM_PARSE_ERROR
-} item_parse_result_t;
-
+/**
+ * This parse the next short item and advance position. Long items are ignored (they seems to be useless).
+ */
 static item_parse_result_t try_parse_next_item(
     const uint8_t *report_desc,
     const uint16_t report_desc_len,
@@ -134,7 +156,7 @@ static item_parse_result_t try_parse_next_item(
     return HID_ITEM_PARSE_EOF;
 }
 
-bool is_report_id_present_in_descriptor(
+bool hid_report_descriptor_is_report_id_present(
     const uint8_t *report_desc,
     const uint16_t desc_len
 ) {
@@ -169,21 +191,11 @@ static hid_report_type_t get_report_type_from_tag(uint8_t tag) {
     }
 }
 
-typedef struct {
-    uint16_t field_count;
-    uint16_t max_field_per_report;
-    uint8_t collection_count;
-    uint8_t report_count;
-} hid_descriptor_summary_t;
-
-
-typedef struct {
-    uint8_t report_id;
-    hid_report_type_t report_type;
-    size_t field_count;
-} hid_report_definition_t;
-
-static bool report_descriptor_count_required_elements(
+/**
+ * This partially parses the report descriptor to count the number of required elements to be able to allocate a
+ * report with the minimum size.
+ */
+static bool hid_report_descriptor_count_required_elements(
     const uint8_t *report_desc,
     const uint16_t desc_len,
     hid_descriptor_summary_t *summary
@@ -193,7 +205,6 @@ static bool report_descriptor_count_required_elements(
     hid_local_state_t *local_state = &parser.local_state;
 
     hid_report_definition_t reports_defs[256] = {0};
-
 
     size_t position = 0;
     hid_raw_short_item_t item;
@@ -295,7 +306,7 @@ static bool report_descriptor_count_required_elements(
 }
 
 static hid_report_t *reserve_report(
-    hid_descriptor_t *report_descriptor
+    hid_report_descriptor_t *report_descriptor
 ) {
     if (report_descriptor->report_count >= report_descriptor->max_reports) {
         return nullptr;
@@ -306,7 +317,7 @@ static hid_report_t *reserve_report(
 }
 
 static hid_report_t *reserve_or_get_report(
-    hid_descriptor_t *report_descriptor,
+    hid_report_descriptor_t *report_descriptor,
     const uint8_t report_id,
     const hid_report_type_t report_type
 ) {
@@ -326,9 +337,9 @@ static hid_report_t *reserve_or_get_report(
 }
 
 static bool add_field_to_report(
-    const hid_descriptor_t *report_descriptor,
+    const hid_report_descriptor_t *report_descriptor,
     hid_report_t *report,
-    const uint8_t field_idx
+    const uint16_t field_idx
 ) {
     if (report->field_count >= report_descriptor->max_field_per_report)
         return false;
@@ -338,7 +349,7 @@ static bool add_field_to_report(
 }
 
 static hid_collection_t *reserve_collection(
-    hid_descriptor_t *report_descriptor,
+    hid_report_descriptor_t *report_descriptor,
     int8_t *out_collection_idx
 ) {
     if (report_descriptor->collection_count >= report_descriptor->max_collections) {
@@ -351,7 +362,7 @@ static hid_collection_t *reserve_collection(
 }
 
 static hid_field_t *reserve_field(
-    hid_descriptor_t *report_descriptor,
+    hid_report_descriptor_t *report_descriptor,
     const uint8_t report_id,
     const hid_report_type_t report_type
 ) {
@@ -385,52 +396,68 @@ static void parse_usage(
 
 /**
  * Based on the number of fields, collections and reports, detected during pre-parse step, allocate a HID descriptor
- * with the appropriate size. To avoid fragmenting memory too much only one allocation is performed with all the data.
+ * with the appropriate size.
  */
-static hid_descriptor_t *allocate_hid_descriptor(
+static hid_report_descriptor_t *hid_descriptor_new(
     const hid_descriptor_summary_t *summary
 ) {
-    constexpr size_t header_size = sizeof(hid_descriptor_t);
-    const size_t fields_size = summary->field_count * sizeof(hid_field_t);
-    const size_t collections_size = summary->collection_count * sizeof(hid_collection_t);
-    const size_t reports_size = summary->report_count * sizeof(hid_report_t);
-    const size_t report_fields_size = summary->max_field_per_report * sizeof(uint16_t);
-    const size_t reports_fields_size = report_fields_size * summary->report_count;
-    const size_t total_size = fields_size + collections_size + reports_size + header_size + reports_fields_size;
-
-    hid_descriptor_t *report_descriptor = calloc(1, total_size);
+    hid_report_descriptor_t *report_descriptor = calloc(1, sizeof(hid_report_descriptor_t));
     if (report_descriptor == nullptr)
         return nullptr;
 
     report_descriptor->max_fields = summary->field_count;
-    report_descriptor->fields = (void *) (uint8_t *) report_descriptor + header_size;
+    report_descriptor->fields = calloc(summary->field_count, sizeof(hid_field_t));
+    if (report_descriptor->fields == nullptr)
+        return nullptr;
+
     report_descriptor->max_collections = summary->collection_count;
-    report_descriptor->collections = (void *) (uint8_t *) report_descriptor + header_size + fields_size;
+    report_descriptor->collections = calloc(summary->collection_count, sizeof(hid_collection_t));
+    if (report_descriptor->collections == nullptr)
+        return nullptr;
+
+    const size_t reports_size = summary->report_count * sizeof(hid_report_t);
+    const size_t reports_fields_size = summary->report_count * summary->max_field_per_report * sizeof(uint16_t);
+
+    void *reports_block = calloc(1, reports_size + reports_fields_size);
+    if (reports_block == nullptr)
+        return nullptr;
+
+    const size_t report_fields_size = summary->max_field_per_report * sizeof(uint16_t);
     report_descriptor->max_reports = summary->report_count;
-    report_descriptor->reports = (void *) (uint8_t *) report_descriptor + header_size + fields_size + collections_size;
     report_descriptor->max_field_per_report = summary->max_field_per_report;
+    report_descriptor->reports = reports_block;
 
     for (uint16_t i = 0; i < summary->report_count; i++) {
-        report_descriptor->reports[i].field_indices = (void *) (uint8_t *) report_descriptor
-                                                      + header_size
-                                                      + fields_size
-                                                      + collections_size
-                                                      + reports_size
+        report_descriptor->reports[i].field_indices = reports_block
+                                                      + sizeof(hid_report_t) * summary->report_count
                                                       + i * report_fields_size;
     }
 
     return report_descriptor;
 }
 
-hid_descriptor_t *parse_report_descriptor(
+void hid_report_descriptor_free(
+    hid_report_descriptor_t *descriptor
+) {
+    if (descriptor == nullptr) {
+        return;
+    }
+
+    free(descriptor->fields);
+    free(descriptor->collections);
+    free(descriptor->reports);
+    free(descriptor);
+}
+
+hid_report_descriptor_t *hid_report_descriptor_parse(
     const uint8_t *report_desc,
     const uint16_t report_desc_len
 ) {
     hid_descriptor_summary_t summary = {0};
-    if (!report_descriptor_count_required_elements(report_desc, report_desc_len, &summary))
+    if (!hid_report_descriptor_count_required_elements(report_desc, report_desc_len, &summary))
         return nullptr;
 
-    hid_descriptor_t *report_descriptor = allocate_hid_descriptor(&summary);
+    hid_report_descriptor_t *report_descriptor = hid_descriptor_new(&summary);
     if (!report_descriptor)
         return nullptr;
 
@@ -696,7 +723,7 @@ hid_descriptor_t *parse_report_descriptor(
 
     return report_descriptor;
 error:
-    free(report_descriptor);
+    hid_report_descriptor_free(report_descriptor);
     return nullptr;
 }
 
@@ -738,8 +765,11 @@ static const char *collection_type_to_string(
     }
 }
 
-void print_report_descriptor(
-    const hid_descriptor_t *report_descriptor,
+/**
+ * Print the report descriptor, mainly used for the tests.
+ */
+void hid_report_descriptor_print(
+    const hid_report_descriptor_t *report_descriptor,
     int (*print)(void *user_data, const char *format, ...) __attribute__((format(printf, 2, 3))),
     void *user_data
 ) {

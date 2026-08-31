@@ -5,8 +5,8 @@
 #include "device/usbd.h"
 #include "bsp/board_api.h"
 
-#include "../shared/logger.h"
-#include "../shared/hid_manager.h"
+#include "hid_manager.h"
+#include "logger.h"
 
 typedef struct {
     uint16_t vid;
@@ -305,7 +305,7 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index) {
         uint16_t report_desc_len = 0;
         if (hid) {
             itf_protocol = hid->itf_protocol;
-            report_desc_len = hid->report_desc_len;
+            report_desc_len = hid->raw_report_descriptor_len;
         }
 
         const uint8_t itf_config_descriptor[] =
@@ -333,7 +333,7 @@ uint8_t const *tud_hid_descriptor_report_cb(
     const hid_t *hid = hid_mgr_get_by_kvm_idx(kvm_hid_idx);
     if (hid == nullptr)
         return empty_hid_descriptor;
-    return hid->report_desc;
+    return hid->raw_report_descriptor;
 }
 
 // ┌──────────────────────────────────┐

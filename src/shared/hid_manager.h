@@ -2,14 +2,17 @@
 
 #include <stdint.h>
 
+#include "hid_report_descriptor.h"
+
 typedef struct {
     uint8_t enabled; /**< true when this entry is used, false if it's not used */
     uint8_t kvm_hid_idx; /**< The index of the HID interface in the KVM (Exposed to the computers) */
     uint8_t dev_addr; /**< Device address (Which port the device is connected. Values: 1, 2) */
     uint8_t host_hid_idx; /**< HID interface index on USB Host side (Where the keyboard / mouse are connected) */
     uint8_t itf_protocol; /**< Interface protocol \see hid_interface_protocol_enum_t */
-    uint8_t *report_desc; /**< Pointer to the report descriptor (malloced) */
-    uint16_t report_desc_len;
+    uint8_t *raw_report_descriptor; /**< Pointer to the report descriptor (malloced) */
+    uint16_t raw_report_descriptor_len;
+    hid_report_descriptor_t *report_descriptor; /**< Parsed report descriptor */
     uint16_t vid;
     uint16_t pid;
     bool use_report_id; /**< **true** when the HID descriptor include one or multiple report ID */

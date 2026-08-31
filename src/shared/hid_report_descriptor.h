@@ -8,12 +8,6 @@
 #define MAX_FIELDS 64
 #define MAX_USAGES 64
 
-typedef enum {
-    HID_REPORT_TYPE_INPUT,
-    HID_REPORT_TYPE_OUTPUT,
-    HID_REPORT_TYPE_FEATURE,
-} hid_report_type_t;
-
 typedef struct {
     int32_t min;
     int32_t max;
@@ -48,8 +42,7 @@ typedef struct __attribute((packed)) {
 
 typedef struct __attribute((packed)) {
     uint8_t report_id;
-    hid_report_type_t report_type;
-
+    uint8_t report_type;
     uint16_t field_count;
     uint16_t *field_indices;
 } hid_report_t;
@@ -74,30 +67,34 @@ typedef struct __attribute((packed)) {
 typedef struct __attribute((packed)) {
     uint16_t fields_count;
     uint16_t max_fields;
+    hid_field_t *fields;
+
     uint8_t collection_count;
     uint8_t max_collections;
+    hid_collection_t *collections;
+
     uint8_t max_reports;
     uint8_t report_count;
     uint16_t max_field_per_report;
-
-    hid_field_t *fields;
-    hid_collection_t *collections;
     hid_report_t *reports;
-} hid_descriptor_t;
+} hid_report_descriptor_t;
 
+void hid_report_descriptor_free(
+    hid_report_descriptor_t *descriptor
+);
 
-bool is_report_id_present_in_descriptor(
+bool hid_report_descriptor_is_report_id_present(
     const uint8_t *report_desc,
     uint16_t desc_len
 );
 
-hid_descriptor_t *parse_report_descriptor(
+hid_report_descriptor_t *hid_report_descriptor_parse(
     const uint8_t *report_desc,
-    uint16_t desc_len
+    uint16_t report_desc_len
 );
 
-void print_report_descriptor(
-    const hid_descriptor_t *report_descriptor,
+void hid_report_descriptor_print(
+    const hid_report_descriptor_t *report_descriptor,
     int (*print)(void *user_data, const char *format, ...),
     void *user_data
 );

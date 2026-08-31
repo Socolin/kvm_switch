@@ -4,7 +4,7 @@
 #include <unistd.h>
 
 #include "unity.h"
-#include "report_descriptor.h"
+#include "hid_report_descriptor.h"
 #include "../test_utils/string_diff.h"
 #include "../test_utils/test_utils_string.h"
 #include "../test_utils/test_utils_file.h"
@@ -15,8 +15,8 @@ void setUp() {
 void tearDown() {
 }
 
-void is_report_id_present_in_descriptor__should_return_false_for_null_descriptor() {
-    TEST_ASSERT_FALSE(is_report_id_present_in_descriptor(nullptr,0));
+void hid_report_descriptor_is_report_id_present__should_return_false_for_null_descriptor() {
+    TEST_ASSERT_FALSE(hid_report_descriptor_is_report_id_present(nullptr,0));
 }
 
 static int parse_hex_char(int c) {
@@ -36,7 +36,7 @@ static bool load_hid_file(
     uint16_t *descriptor_data_size
 ) {
     char hid_filepath[512] = {};
-    string_combine(hid_filepath, TEST_SRC_DIR, "/shared/report_descriptors/", name, ".hid.txt");
+    string_combine(hid_filepath, TEST_SRC_DIR, "/shared/hid_report_descriptors/", name, ".hid.txt");
     char *test_file_content = load_file_in_memory(hid_filepath);
     const size_t test_file_size = strlen(test_file_content);
 
@@ -68,26 +68,26 @@ static bool load_hid_file(
     return true;
 }
 
-void parse_report_descriptor__should_parse_examples(
+void hid_report_descriptor_parse__should_parse_examples(
     const char *name
 ) {
     char expected_filepath[512] = {};
-    string_combine(expected_filepath, TEST_SRC_DIR, "/shared/report_descriptors/", name, ".expected.txt");
+    string_combine(expected_filepath, TEST_SRC_DIR, "/shared/hid_report_descriptors/", name, ".expected.txt");
     char *expected = load_file_in_memory(expected_filepath);
 
     uint8_t *descriptor = nullptr;
     uint16_t descriptor_len = 0;
     TEST_ASSERT_TRUE(load_hid_file(name, &descriptor, &descriptor_len));
 
-    hid_descriptor_t *actual = parse_report_descriptor(descriptor, descriptor_len);
+    hid_report_descriptor_t *actual = hid_report_descriptor_parse(descriptor, descriptor_len);
     free(descriptor);
     TEST_ASSERT_NOT_NULL(actual);
 
     test_print_buffer_t test_buffer = {0};
-    print_report_descriptor(actual, print_to_buffer, &test_buffer);
+    hid_report_descriptor_print(actual, print_to_buffer, &test_buffer);
 
     char actual_filepath[512] = {};
-    string_combine(actual_filepath, TEST_SRC_DIR, "/shared/report_descriptors/", name, ".actual.txt");
+    string_combine(actual_filepath, TEST_SRC_DIR, "/shared/hid_report_descriptors/", name, ".actual.txt");
     FILE *actual_file = fopen(actual_filepath, "w");
     TEST_ASSERT_NOT_NULL(actual_file);
     fwrite(test_buffer.buffer, sizeof(char), test_buffer.length, actual_file);
@@ -98,43 +98,43 @@ void parse_report_descriptor__should_parse_examples(
     free(actual);
 }
 
-void parse_report_descriptor__should_parse_examples_keyboard() {
-    parse_report_descriptor__should_parse_examples("keyboard");
+void hid_report_descriptor_parse__should_parse_examples_keyboard() {
+    hid_report_descriptor_parse__should_parse_examples("keyboard");
 }
 
 /** Sign extended Logical Minimum, and restoring the parent collection on End Collection. */
-void parse_report_descriptor__should_parse_examples_mouse() {
-    parse_report_descriptor__should_parse_examples("mouse");
+void hid_report_descriptor_parse__should_parse_examples_mouse() {
+    hid_report_descriptor_parse__should_parse_examples("mouse");
 }
 
 /** Push saves a copy of the global item state, Pop restores it. */
-void parse_report_descriptor__should_parse_examples_push_pop() {
-    parse_report_descriptor__should_parse_examples("push_pop");
+void hid_report_descriptor_parse__should_parse_examples_push_pop() {
+    hid_report_descriptor_parse__should_parse_examples("push_pop");
 }
 
 /** Report Count larger than the declared Usage list repeats the last Usage. */
-void parse_report_descriptor__should_parse_examples_usage_list() {
-    parse_report_descriptor__should_parse_examples("usage_list");
+void hid_report_descriptor_parse__should_parse_examples_usage_list() {
+    hid_report_descriptor_parse__should_parse_examples("usage_list");
 }
 
 /** More declared Usages than MAX_USAGES used to hold. */
-void parse_report_descriptor__should_parse_examples_many_usages() {
-    parse_report_descriptor__should_parse_examples("many_usages");
+void hid_report_descriptor_parse__should_parse_examples_many_usages() {
+    hid_report_descriptor_parse__should_parse_examples("many_usages");
 }
 
 /** 4 byte Usage items carry their own Usage Page. */
-void parse_report_descriptor__should_parse_examples_usage_page_qualified() {
-    parse_report_descriptor__should_parse_examples("usage_page_qualified");
+void hid_report_descriptor_parse__should_parse_examples_usage_page_qualified() {
+    hid_report_descriptor_parse__should_parse_examples("usage_page_qualified");
 }
 
 /** Fields are grouped per (Report ID, report type). */
-void parse_report_descriptor__should_parse_examples_report_ids() {
-    parse_report_descriptor__should_parse_examples("report_ids");
+void hid_report_descriptor_parse__should_parse_examples_report_ids() {
+    hid_report_descriptor_parse__should_parse_examples("report_ids");
 }
 
 /** Physical range and the 4 bit two's complement Unit Exponent. */
-void parse_report_descriptor__should_parse_examples_dial() {
-    parse_report_descriptor__should_parse_examples("dial");
+void hid_report_descriptor_parse__should_parse_examples_dial() {
+    hid_report_descriptor_parse__should_parse_examples("dial");
 }
 
 // Cases that cannot be expressed through print_report_descriptor, because they
@@ -145,7 +145,7 @@ void parse_report_descriptor__should_parse_examples_dial() {
  * the next call: this one opens a collection and then hits an invalid Main tag,
  * so it never reaches its End Collection.
  */
-void parse_report_descriptor__should_not_leak_state_into_the_next_parse() {
+void hid_report_descriptor_parse__should_not_leak_state_into_the_next_parse() {
     const uint8_t unbalanced[] = {
         0x05, 0x01, // Usage Page (Generic Desktop)
         0x09, 0x02, // Usage (Mouse)
@@ -164,9 +164,9 @@ void parse_report_descriptor__should_not_leak_state_into_the_next_parse() {
     };
 
     for (int attempt = 0; attempt < 8; attempt++) {
-        TEST_ASSERT_NULL(parse_report_descriptor(unbalanced, sizeof(unbalanced)));
+        TEST_ASSERT_NULL(hid_report_descriptor_parse(unbalanced, sizeof(unbalanced)));
 
-        hid_descriptor_t *actual = parse_report_descriptor(valid, sizeof(valid));
+        hid_report_descriptor_t *actual = hid_report_descriptor_parse(valid, sizeof(valid));
         TEST_ASSERT_NOT_NULL(actual);
         TEST_ASSERT_EQUAL(1, actual->collection_count);
         TEST_ASSERT_EQUAL(1, actual->fields_count);
@@ -176,16 +176,16 @@ void parse_report_descriptor__should_not_leak_state_into_the_next_parse() {
 }
 
 /** An item whose data runs past the end of the descriptor must be rejected. */
-void parse_report_descriptor__should_fail_on_truncated_item() {
+void hid_report_descriptor_parse__should_fail_on_truncated_item() {
     const uint8_t descriptor[] = {
         0x05, 0x01, // Usage Page (Generic Desktop)
         0x26, 0xFF, // Logical Maximum, 2 bytes announced but only 1 present
     };
-    TEST_ASSERT_NULL(parse_report_descriptor(descriptor, sizeof(descriptor)));
+    TEST_ASSERT_NULL(hid_report_descriptor_parse(descriptor, sizeof(descriptor)));
 }
 
 /** More nesting than COLLECTION_STACK_SIZE must fail cleanly. */
-void parse_report_descriptor__should_fail_on_collection_nested_too_deep() {
+void hid_report_descriptor_parse__should_fail_on_collection_nested_too_deep() {
     const uint8_t descriptor[] = {
         0xA1, 0x01, // Collection (Application)
         0xA1, 0x00, // Collection (Physical)
@@ -193,19 +193,19 @@ void parse_report_descriptor__should_fail_on_collection_nested_too_deep() {
         0xA1, 0x02, // Collection (Logical)
         0xA1, 0x02, // Collection (Logical)
     };
-    TEST_ASSERT_NULL(parse_report_descriptor(descriptor, sizeof(descriptor)));
+    TEST_ASSERT_NULL(hid_report_descriptor_parse(descriptor, sizeof(descriptor)));
 }
 
 /** End Collection without a matching Collection must fail cleanly. */
-void parse_report_descriptor__should_fail_on_unmatched_end_collection() {
+void hid_report_descriptor_parse__should_fail_on_unmatched_end_collection() {
     const uint8_t descriptor[] = {
         0x05, 0x01, // Usage Page (Generic Desktop)
         0xC0, // End Collection
     };
-    TEST_ASSERT_NULL(parse_report_descriptor(descriptor, sizeof(descriptor)));
+    TEST_ASSERT_NULL(hid_report_descriptor_parse(descriptor, sizeof(descriptor)));
 }
 
-void is_report_id_present_in_descriptor__should_return_true_when_report_id_is_declared() {
+void hid_report_descriptor_is_report_id_present__should_return_true_when_report_id_is_declared() {
     const uint8_t descriptor[] = {
         0x05, 0x01, // Usage Page (Generic Desktop)
         0x09, 0x06, // Usage (Keyboard)
@@ -213,10 +213,10 @@ void is_report_id_present_in_descriptor__should_return_true_when_report_id_is_de
         0x85, 0x03, // Report ID (3)
         0xC0, // End Collection
     };
-    TEST_ASSERT_TRUE(is_report_id_present_in_descriptor(descriptor, sizeof(descriptor)));
+    TEST_ASSERT_TRUE(hid_report_descriptor_is_report_id_present(descriptor, sizeof(descriptor)));
 }
 
-void is_report_id_present_in_descriptor__should_return_false_when_no_report_id_is_declared() {
+void hid_report_descriptor_is_report_id_present__should_return_false_when_no_report_id_is_declared() {
     const uint8_t descriptor[] = {
         0x05, 0x01, // Usage Page (Generic Desktop)
         0x09, 0x06, // Usage (Keyboard)
@@ -224,42 +224,42 @@ void is_report_id_present_in_descriptor__should_return_false_when_no_report_id_i
         0x75, 0x08, // Report Size (8), the 8 is data and must not be read as a Report ID
         0xC0, // End Collection
     };
-    TEST_ASSERT_FALSE(is_report_id_present_in_descriptor(descriptor, sizeof(descriptor)));
+    TEST_ASSERT_FALSE(hid_report_descriptor_is_report_id_present(descriptor, sizeof(descriptor)));
 }
 
 /**
  * A Long item's payload must be skipped, not walked into: the 0x85 byte inside
  * it is data, not a Report ID.
  */
-void is_report_id_present_in_descriptor__should_skip_long_item_payload() {
+void hid_report_descriptor_is_report_id_present__should_skip_long_item_payload() {
     const uint8_t descriptor[] = {
         0x05, 0x01, // Usage Page (Generic Desktop)
         0xFE, 0x02, 0x0F, // Long item, 2 data bytes, tag 0x0F
         0x85, 0x03, //   payload that looks like Report ID (3)
         0xC0, // End Collection
     };
-    TEST_ASSERT_FALSE(is_report_id_present_in_descriptor(descriptor, sizeof(descriptor)));
+    TEST_ASSERT_FALSE(hid_report_descriptor_is_report_id_present(descriptor, sizeof(descriptor)));
 }
 
 int main() {
     UNITY_BEGIN();
-    RUN_TEST(is_report_id_present_in_descriptor__should_return_false_for_null_descriptor);
-    RUN_TEST(is_report_id_present_in_descriptor__should_return_true_when_report_id_is_declared);
-    RUN_TEST(is_report_id_present_in_descriptor__should_return_false_when_no_report_id_is_declared);
-    RUN_TEST(is_report_id_present_in_descriptor__should_skip_long_item_payload);
+    RUN_TEST(hid_report_descriptor_is_report_id_present__should_return_false_for_null_descriptor);
+    RUN_TEST(hid_report_descriptor_is_report_id_present__should_return_true_when_report_id_is_declared);
+    RUN_TEST(hid_report_descriptor_is_report_id_present__should_return_false_when_no_report_id_is_declared);
+    RUN_TEST(hid_report_descriptor_is_report_id_present__should_skip_long_item_payload);
 
-    RUN_TEST(parse_report_descriptor__should_parse_examples_keyboard);
-    RUN_TEST(parse_report_descriptor__should_parse_examples_mouse);
-    RUN_TEST(parse_report_descriptor__should_parse_examples_push_pop);
-    RUN_TEST(parse_report_descriptor__should_parse_examples_usage_list);
-    RUN_TEST(parse_report_descriptor__should_parse_examples_many_usages);
-    RUN_TEST(parse_report_descriptor__should_parse_examples_usage_page_qualified);
-    RUN_TEST(parse_report_descriptor__should_parse_examples_report_ids);
-    RUN_TEST(parse_report_descriptor__should_parse_examples_dial);
+    RUN_TEST(hid_report_descriptor_parse__should_parse_examples_keyboard);
+    RUN_TEST(hid_report_descriptor_parse__should_parse_examples_mouse);
+    RUN_TEST(hid_report_descriptor_parse__should_parse_examples_push_pop);
+    RUN_TEST(hid_report_descriptor_parse__should_parse_examples_usage_list);
+    RUN_TEST(hid_report_descriptor_parse__should_parse_examples_many_usages);
+    RUN_TEST(hid_report_descriptor_parse__should_parse_examples_usage_page_qualified);
+    RUN_TEST(hid_report_descriptor_parse__should_parse_examples_report_ids);
+    RUN_TEST(hid_report_descriptor_parse__should_parse_examples_dial);
 
-    RUN_TEST(parse_report_descriptor__should_not_leak_state_into_the_next_parse);
-    RUN_TEST(parse_report_descriptor__should_fail_on_truncated_item);
-    RUN_TEST(parse_report_descriptor__should_fail_on_collection_nested_too_deep);
-    RUN_TEST(parse_report_descriptor__should_fail_on_unmatched_end_collection);
+    RUN_TEST(hid_report_descriptor_parse__should_not_leak_state_into_the_next_parse);
+    RUN_TEST(hid_report_descriptor_parse__should_fail_on_truncated_item);
+    RUN_TEST(hid_report_descriptor_parse__should_fail_on_collection_nested_too_deep);
+    RUN_TEST(hid_report_descriptor_parse__should_fail_on_unmatched_end_collection);
     return UNITY_END();
 }

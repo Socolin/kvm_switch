@@ -7,7 +7,7 @@ add_library(shared
         node_link.c
         pico_utils.c
         quick_reset_button.c
-        report_descriptor.c
+        hid_report_descriptor.c
         utils.c
 )
 

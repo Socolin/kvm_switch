@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "logger.h"
-#include "report_descriptor.h"
+#include "hid_report_descriptor.h"
 
 typedef struct {
     hid_t hid[MAX_HID_COUNT];
@@ -41,18 +41,20 @@ bool hid_mgr_register_at_hid(
     hid_t *hid = &hid_mgr.hid[kvm_hid_idx];
 
     if (hid->enabled) {
-        free(hid->report_desc);
+        free(hid->raw_report_descriptor);
+        hid_report_descriptor_free(hid->report_descriptor);
     }
 
     hid->enabled = true;
     hid->dev_addr = dev_addr;
     hid->host_hid_idx = host_hid_idx;
     hid->itf_protocol = itf_protocol;
-    hid->report_desc = report_desc;
+    hid->raw_report_descriptor = report_desc;
     hid->vid = vid;
     hid->pid = pid;
-    hid->report_desc_len = report_desc_len;
-    hid->use_report_id = is_report_id_present_in_descriptor(report_desc, report_desc_len);
+    hid->raw_report_descriptor_len = report_desc_len;
+    hid->report_descriptor = hid_report_descriptor_parse(report_desc, report_desc_len);
+    hid->use_report_id = hid_report_descriptor_is_report_id_present(report_desc, report_desc_len);
 
     logf_debug("dev_addr: %u, interface_idx: %u, itf_protocol: %u, report_desc_len: %u, use_report_id: %u",
                dev_addr, host_hid_idx, itf_protocol, report_desc_len, hid->use_report_id);
@@ -107,7 +109,7 @@ void hid_mgr_unregister_hid(
             continue;
 
         if (hid->dev_addr == dev_addr && hid->host_hid_idx == host_hid_idx) {
-            free(hid->report_desc);
+            free(hid->raw_report_descriptor);
             memset(hid, 0, sizeof(hid_t));
             hid->kvm_hid_idx = kvm_hid_idx;
             return;

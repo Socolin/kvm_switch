@@ -4,8 +4,8 @@ project(unit_tests C)
 set(CMAKE_C_STANDARD 23)
 
 add_executable(test_shared
-        shared/test_report_descriptor.c
-        ${CMAKE_SOURCE_DIR}/../src/shared/report_descriptor.c
+        shared/test_hid_report_descriptor.c
+        ${CMAKE_SOURCE_DIR}/../src/shared/hid_report_descriptor.c
         ${CMAKE_SOURCE_DIR}/unity/src/unity.c
         test_utils/test_utils_string.c
         test_utils/string_diff.c

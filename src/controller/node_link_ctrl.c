@@ -246,8 +246,8 @@ void node_link_ctrl_enqueue_broadcast_hid_mount(
                                        NL_CTRL_MESSAGE_OP_HID_MOUNT,
                                        &message_data,
                                        sizeof(message_data),
-                                       hid->report_desc,
-                                       hid->report_desc_len,
+                                       hid->raw_report_descriptor,
+                                       hid->raw_report_descriptor_len,
                                        false
         );
     }
@@ -270,8 +270,8 @@ void node_link_ctrl_enqueue_send_hid_mount(
                                    NL_CTRL_MESSAGE_OP_HID_MOUNT,
                                    &message_data,
                                    sizeof(message_data),
-                                   hid->report_desc,
-                                   hid->report_desc_len,
+                                   hid->raw_report_descriptor,
+                                   hid->raw_report_descriptor_len,
                                    false
     );
 }
