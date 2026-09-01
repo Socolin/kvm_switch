@@ -5,6 +5,8 @@
 
 #include "logger.h"
 
+#include "key_codes.h"
+
 typedef struct {
     keyboard_shortcut_t keyboard_shortcut[MAX_KEYBOARD_SHORTCUT];
 } kvm_config_t;
@@ -17,10 +19,18 @@ void kvm_config_init() {
         kvm_config.keyboard_shortcut[i].shortcut_id = i;
         kvm_config.keyboard_shortcut[i].enabled = false;
     }
+
+    constexpr uint8_t shortcut_1_keys[] = {HID_KEYBOARD_USAGE_SCROLL_LOCK, HID_KEYBOARD_USAGE_1};
+    constexpr uint8_t shortcut_1_data[] = {0};
+    kvm_config_set_shortcut(0, CHANGE_ACTIVE_COMPUTER_SET, 2, shortcut_1_keys, 1, shortcut_1_data);
+    constexpr uint8_t shortcut_2_keys[] = {HID_KEYBOARD_USAGE_SCROLL_LOCK, HID_KEYBOARD_USAGE_2};
+    constexpr uint8_t shortcut_2_data[] = {1};
+    kvm_config_set_shortcut(1, CHANGE_ACTIVE_COMPUTER_SET, 2, shortcut_2_keys, 1, shortcut_2_data);
 }
 
 void kvm_config_set_shortcut(
     const uint8_t shortcut_id,
+    const shortcut_action_t action,
     const uint8_t key_count,
     const uint8_t *keys,
     const uint8_t data_len,
@@ -42,6 +52,8 @@ void kvm_config_set_shortcut(
     keyboard_shortcut_t *shortcut = &kvm_config.keyboard_shortcut[shortcut_id];
     shortcut->key_count = key_count;
     memcpy(shortcut->keys, keys, key_count);
+    shortcut->enabled = true;
+    shortcut->action = action;
     shortcut->data_len = data_len;
     memcpy(shortcut->data, data, data_len);
 }
@@ -51,14 +63,15 @@ const keyboard_shortcut_t *kvm_config_first_matching_shortcut(
     const uint8_t *keys
 ) {
     for (uint8_t shortcut_id = 0; shortcut_id < MAX_KEYBOARD_SHORTCUT; shortcut_id++) {
-        keyboard_shortcut_t *shortcut = &kvm_config.keyboard_shortcut[shortcut_id];
+        const keyboard_shortcut_t *shortcut = &kvm_config.keyboard_shortcut[shortcut_id];
         if (!shortcut->enabled || shortcut->key_count != key_count)
             continue;
+
         bool match = true;
         for (uint8_t key_idx = 0; key_idx < key_count; key_idx++) {
             bool key_found = false;
             for (uint8_t key_idx2 = 0; key_idx2 < key_count; key_idx2++) {
-                if (shortcut->keys[key_idx] != keys[key_idx2]) {
+                if (shortcut->keys[key_idx] == keys[key_idx2]) {
                     key_found = true;
                     break;
                 }

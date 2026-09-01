@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "hid_keyboard_report_util.h"
 #include "logger.h"
 #include "hid_report_descriptor.h"
 
@@ -54,6 +55,9 @@ bool hid_mgr_register_at_hid(
     hid->pid = pid;
     hid->raw_report_descriptor_len = report_desc_len;
     hid->report_descriptor = hid_report_descriptor_parse(report_desc, report_desc_len);
+    if (hid->report_descriptor) {
+        hid->has_keyboard_report = hid_report_descriptor_contains_keycodes(hid->report_descriptor);
+    }
     hid->use_report_id = hid_report_descriptor_is_report_id_present(report_desc, report_desc_len);
 
     logf_debug("dev_addr: %u, interface_idx: %u, itf_protocol: %u, report_desc_len: %u, use_report_id: %u",

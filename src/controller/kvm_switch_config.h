@@ -26,6 +26,7 @@ void kvm_config_init();
 
 void kvm_config_set_shortcut(
     uint8_t shortcut_id,
+    shortcut_action_t action,
     uint8_t key_count,
     const uint8_t *keys,
     uint8_t data_len,

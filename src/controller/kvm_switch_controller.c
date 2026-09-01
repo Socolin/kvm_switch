@@ -11,6 +11,8 @@
 #include "../shared_usb/usb_device.h"
 
 #include "computer_manager.h"
+#include "hid_keyboard_report_util.h"
+#include "kvm_switch_config.h"
 #include "node_link_ctrl.h"
 #include "usb_host.h"
 
@@ -110,39 +112,62 @@ static void kvm_switch_process_actions() {
                 break;
             }
             case KVM_SWITCH_CONTROLLER_OP_HID_REPORT: {
-                 auto const data = (ksc_action_hid_report_data_t *) kvm_switch_action.data;
-
-                if (data->itf_protocol == HID_ITF_PROTOCOL_KEYBOARD) {
-                    bool scroll_lock_pressed = false;
-                    bool key_1_pressed = false;
-                    bool key_2_pressed = false;
-                    int key_pressed_count = 0;
-
-                    for (int i = 2; i < data->report_data_len; i++) {
-                        if (data->report_data[i] != 0) {
-                            key_pressed_count++;
-                        }
-                        scroll_lock_pressed |= data->report_data[i] == 0x47;
-                        key_1_pressed |= data->report_data[i] == 0x1e;
-                        key_2_pressed |= data->report_data[i] == 0x1f;
-                    }
-                    logf_debug("key_pressed_count: %d scroll_lock_pressed: %d key_1_pressed: %d key_2_pressed: %d",
-                               key_pressed_count, scroll_lock_pressed, key_1_pressed, key_2_pressed);
-                    if (key_pressed_count == 2) {
-                        if (scroll_lock_pressed && key_1_pressed) {
-                            kvm_switch_ctrl_set_active_computer(0);
-                        } else if (scroll_lock_pressed && key_2_pressed) {
-                            kvm_switch_ctrl_set_active_computer(1);
-                        }
-                        return;
-                    }
-                }
+                auto const data = (ksc_action_hid_report_data_t *) kvm_switch_action.data;
 
                 const hid_t *hid = hid_mgr_get_by_host_idx(data->dev_addr, data->host_hid_idx);
                 if (hid == nullptr) {
                     logf_warning("hid_mgr_get_by_host_idx returned nullptr dev_addr: %u host_hid_idx: %u",
                                  data->dev_addr, data->host_hid_idx);
                     return;
+                }
+
+                uint8_t pressed_keys[16];
+                size_t pressed_keys_count = 0;
+
+                if (data->itf_protocol == HID_ITF_PROTOCOL_KEYBOARD && data->hid_protocol == HID_PROTOCOL_BOOT) {
+                    pressed_keys_count = hid_report_keyboard_boot_get_pressed_keys(
+                        data->report_data,
+                        data->report_data_len,
+                        pressed_keys,
+                        sizeof(pressed_keys)
+                    );
+                } else if (hid->has_keyboard_report) {
+                    pressed_keys_count = hid_report_get_pressed_keys(
+                        hid->report_descriptor,
+                        data->report_data,
+                        data->report_data_len,
+                        data->report_id,
+                        pressed_keys,
+                        sizeof(pressed_keys)
+                    );
+                }
+
+                if (pressed_keys_count > 0) {
+                    const keyboard_shortcut_t *shortcut = kvm_config_first_matching_shortcut(
+                        pressed_keys_count,
+                        pressed_keys
+                    );
+                    if (shortcut) {
+                        logf_info("Executing shortcut: %d", shortcut->shortcut_id);
+                        switch (shortcut->action) {
+                            case CHANGE_ACTIVE_COMPUTER_SET: {
+                                kvm_switch_ctrl_set_active_computer(shortcut->data[0]);
+                                break;
+                            }
+                            case CHANGE_ACTIVE_COMPUTER_NEXT: {
+                                kvm_switch_ctrl_set_active_computer((kvm_switch.active_computer_id + 1) % MAX_COMPUTER);
+                                break;
+                            }
+                            case CHANGE_ACTIVE_COMPUTER_PREVIOUS: {
+                                int32_t target_computer_id = kvm_switch.active_computer_id - 1;
+                                if (target_computer_id < 0)
+                                    target_computer_id = MAX_COMPUTER - 1;
+                                kvm_switch_ctrl_set_active_computer(target_computer_id);
+                                break;
+                            }
+                        }
+                        break;
+                    }
                 }
                 if (kvm_switch.active_computer_id == LOCAL_COMPUTER_ID) {
                     usb_device_send_report(hid->kvm_hid_idx, data->report_id, data->report_data, data->report_data_len);

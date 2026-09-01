@@ -13,6 +13,7 @@ typedef struct {
     uint8_t *raw_report_descriptor; /**< Pointer to the report descriptor (malloced) */
     uint16_t raw_report_descriptor_len;
     hid_report_descriptor_t *report_descriptor; /**< Parsed report descriptor */
+    bool has_keyboard_report;
     uint16_t vid;
     uint16_t pid;
     bool use_report_id; /**< **true** when the HID descriptor include one or multiple report ID */

@@ -2,7 +2,6 @@
 
 #include <assert.h>
 #include <inttypes.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -73,19 +72,6 @@ typedef struct {
     uint8_t collection_count;
     uint8_t report_count;
 } hid_descriptor_summary_t;
-
-typedef enum {
-    HID_REPORT_TYPE_INPUT,
-    HID_REPORT_TYPE_OUTPUT,
-    HID_REPORT_TYPE_FEATURE,
-} hid_report_type_t;
-
-typedef struct {
-    uint8_t report_id;
-    hid_report_type_t report_type;
-    size_t field_count;
-} hid_report_definition_t;
-
 
 static int32_t parse_signed_item_value(
     const uint8_t *data,
@@ -178,14 +164,14 @@ bool hid_report_descriptor_is_report_id_present(
     return false;
 }
 
-static hid_report_type_t get_report_type_from_tag(uint8_t tag) {
+static hid_descriptor_report_type_t get_report_type_from_tag(uint8_t tag) {
     switch (tag) {
         case HID_REPORT_MAIN_ITEM_OUTPUT:
-            return HID_REPORT_TYPE_OUTPUT;
+            return HID_DESCRIPTOR_REPORT_TYPE_OUTPUT;
         case HID_REPORT_MAIN_ITEM_FEATURE:
-            return HID_REPORT_TYPE_FEATURE;
+            return HID_DESCRIPTOR_REPORT_TYPE_FEATURE;
         case HID_REPORT_MAIN_ITEM_INPUT:
-            return HID_REPORT_TYPE_INPUT;
+            return HID_DESCRIPTOR_REPORT_TYPE_INPUT;
         default:
             assert(false);
     }
@@ -221,27 +207,27 @@ static bool hid_report_descriptor_count_required_elements(
                     case HID_REPORT_MAIN_ITEM_INPUT: {
                         const hid_report_main_item_flags_t *flags = (hid_report_main_item_flags_t *) &item.udata;
                         const uint8_t report_id = global_state->report_id;
-                        const hid_report_type_t report_type = get_report_type_from_tag(item.tag);
+                        const hid_descriptor_report_type_t report_type = get_report_type_from_tag(item.tag);
 
-                        hid_report_definition_t *report = nullptr;
+                        hid_report_definition_t *report_def = nullptr;
                         for (uint16_t i = 0; i < summary->report_count; i++) {
                             if (reports_defs[i].report_id == report_id && reports_defs[i].report_type == report_type) {
-                                report = &reports_defs[i];
+                                report_def = &reports_defs[i];
                                 break;
                             }
                         }
-                        if (!report) {
-                            report = &reports_defs[summary->report_count++];
-                            report->report_id = report_id;
-                            report->report_type = report_type;
+                        if (!report_def) {
+                            report_def = &reports_defs[summary->report_count++];
+                            report_def->report_id = report_id;
+                            report_def->report_type = report_type;
                         }
 
                         if (HID_MAIN_ITEM_IS_CONSTANT(flags)) {
                             summary->field_count++;
-                            report->field_count++;
+                            report_def->field_count++;
                         } else {
                             summary->field_count += global_state->report_count;
-                            report->field_count += global_state->report_count;
+                            report_def->field_count += global_state->report_count;
                         }
                         break;
                     }
@@ -305,29 +291,29 @@ static bool hid_report_descriptor_count_required_elements(
     return true;
 }
 
-static hid_report_t *reserve_report(
+static hid_report_definition_t *reserve_report(
     hid_report_descriptor_t *report_descriptor
 ) {
     if (report_descriptor->report_count >= report_descriptor->max_reports) {
         return nullptr;
     }
-    hid_report_t *field = &report_descriptor->reports[report_descriptor->report_count];
+    hid_report_definition_t *field = &report_descriptor->reports_definitions[report_descriptor->report_count];
     report_descriptor->report_count++;
     return field;
 }
 
-static hid_report_t *reserve_or_get_report(
+static hid_report_definition_t *reserve_or_get_report(
     hid_report_descriptor_t *report_descriptor,
     const uint8_t report_id,
-    const hid_report_type_t report_type
+    const hid_descriptor_report_type_t report_type
 ) {
     for (int i = 0; i < report_descriptor->report_count; i++) {
-        hid_report_t *report = &report_descriptor->reports[i];
+        hid_report_definition_t *report = &report_descriptor->reports_definitions[i];
         if (report->report_id == report_id && report->report_type == report_type) {
             return report;
         }
     }
-    hid_report_t *report = reserve_report(report_descriptor);
+    hid_report_definition_t *report = reserve_report(report_descriptor);
     if (report == nullptr) {
         return nullptr;
     }
@@ -338,7 +324,7 @@ static hid_report_t *reserve_or_get_report(
 
 static bool add_field_to_report(
     const hid_report_descriptor_t *report_descriptor,
-    hid_report_t *report,
+    hid_report_definition_t *report,
     const uint16_t field_idx
 ) {
     if (report->field_count >= report_descriptor->max_field_per_report)
@@ -364,13 +350,13 @@ static hid_collection_t *reserve_collection(
 static hid_field_t *reserve_field(
     hid_report_descriptor_t *report_descriptor,
     const uint8_t report_id,
-    const hid_report_type_t report_type
+    const hid_descriptor_report_type_t report_type
 ) {
     if (report_descriptor->fields_count >= report_descriptor->max_fields) {
         return nullptr;
     }
     hid_field_t *field = &report_descriptor->fields[report_descriptor->fields_count];
-    hid_report_t *report = reserve_or_get_report(report_descriptor, report_id, report_type);
+    hid_report_definition_t *report = reserve_or_get_report(report_descriptor, report_id, report_type);
     if (!report) {
         return nullptr;
     }
@@ -415,7 +401,7 @@ static hid_report_descriptor_t *hid_descriptor_new(
     if (report_descriptor->collections == nullptr)
         return nullptr;
 
-    const size_t reports_size = summary->report_count * sizeof(hid_report_t);
+    const size_t reports_size = summary->report_count * sizeof(hid_report_definition_t);
     const size_t reports_fields_size = summary->report_count * summary->max_field_per_report * sizeof(uint16_t);
 
     void *reports_block = calloc(1, reports_size + reports_fields_size);
@@ -425,11 +411,11 @@ static hid_report_descriptor_t *hid_descriptor_new(
     const size_t report_fields_size = summary->max_field_per_report * sizeof(uint16_t);
     report_descriptor->max_reports = summary->report_count;
     report_descriptor->max_field_per_report = summary->max_field_per_report;
-    report_descriptor->reports = reports_block;
+    report_descriptor->reports_definitions = reports_block;
 
     for (uint16_t i = 0; i < summary->report_count; i++) {
-        report_descriptor->reports[i].field_indices = reports_block
-                                                      + sizeof(hid_report_t) * summary->report_count
+        report_descriptor->reports_definitions[i].field_indices = reports_block
+                                                      + sizeof(hid_report_definition_t) * summary->report_count
                                                       + i * report_fields_size;
     }
 
@@ -445,7 +431,7 @@ void hid_report_descriptor_free(
 
     free(descriptor->fields);
     free(descriptor->collections);
-    free(descriptor->reports);
+    free(descriptor->reports_definitions);
     free(descriptor);
 }
 
@@ -483,7 +469,7 @@ hid_report_descriptor_t *hid_report_descriptor_parse(
                     case HID_REPORT_MAIN_ITEM_INPUT: {
                         const hid_report_main_item_flags_t *flags = (hid_report_main_item_flags_t *) &item.udata;
                         const uint8_t report_id = global_state->report_id;
-                        const hid_report_type_t report_type = get_report_type_from_tag(item.tag);
+                        const hid_descriptor_report_type_t report_type = get_report_type_from_tag(item.tag);
 
                         if (HID_MAIN_ITEM_IS_CONSTANT(flags)) {
                             hid_field_t *field = reserve_field(report_descriptor, report_id, report_type);
@@ -731,11 +717,11 @@ static const char *report_type_to_string(
     const uint8_t report_type
 ) {
     switch (report_type) {
-        case HID_REPORT_TYPE_INPUT:
+        case HID_DESCRIPTOR_REPORT_TYPE_INPUT:
             return "Input";
-        case HID_REPORT_TYPE_OUTPUT:
+        case HID_DESCRIPTOR_REPORT_TYPE_OUTPUT:
             return "Output";
-        case HID_REPORT_TYPE_FEATURE:
+        case HID_DESCRIPTOR_REPORT_TYPE_FEATURE:
             return "Feature";
         default:
             return "Unknown";
@@ -782,13 +768,13 @@ void hid_report_descriptor_print(
         print(user_data, ", Parent: %" PRId8 "\n", collection->parent_idx);
     }
     for (uint32_t r = 0; r < report_descriptor->report_count; r++) {
-        const hid_report_t *report = &report_descriptor->reports[r];
+        const hid_report_definition_t *report_def = &report_descriptor->reports_definitions[r];
         print(user_data, "Report %" PRIu32 ":\n", r);
-        print(user_data, "  Report ID: %" PRIu8 "\n", report->report_id);
-        print(user_data, "  Report Type: %s\n", report_type_to_string(report->report_type));
+        print(user_data, "  Report ID: %" PRIu8 "\n", report_def->report_id);
+        print(user_data, "  Report Type: %s\n", report_type_to_string(report_def->report_type));
         print(user_data, "  Fields:\n");
-        for (uint32_t f = 0; f < report->field_count; f++) {
-            const hid_field_t *field = &report_descriptor->fields[report->field_indices[f]];
+        for (uint32_t f = 0; f < report_def->field_count; f++) {
+            const hid_field_t *field = &report_descriptor->fields[report_def->field_indices[f]];
             print(user_data, "    Bits: %u", field->bit_size);
             print(user_data, ", Collection: %" PRId8, field->collection_idx);
             print(user_data, ", UsagePage: %" PRIu16, field->usage_page);
@@ -821,7 +807,7 @@ void hid_report_descriptor_print(
                 print(user_data, "Relative");
             else
                 print(user_data, "Absolute");
-            if (report->report_type != HID_REPORT_TYPE_INPUT && HID_MAIN_ITEM_IS_ARRAY(&field->flags.parsed_flags)) {
+            if (report_def->report_type != HID_DESCRIPTOR_REPORT_TYPE_INPUT && HID_MAIN_ITEM_IS_ARRAY(&field->flags.parsed_flags)) {
                 print(user_data, ",");
                 if (field->flags.parsed_flags.no_wrap_wrap)
                     print(user_data, "Wrap");

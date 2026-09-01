@@ -40,12 +40,18 @@ typedef struct __attribute((packed)) {
     int8_t collection_idx;
 } hid_field_t;
 
+typedef enum {
+    HID_DESCRIPTOR_REPORT_TYPE_INPUT,
+    HID_DESCRIPTOR_REPORT_TYPE_OUTPUT,
+    HID_DESCRIPTOR_REPORT_TYPE_FEATURE,
+} hid_descriptor_report_type_t;
+
 typedef struct __attribute((packed)) {
     uint8_t report_id;
     uint8_t report_type;
     uint16_t field_count;
     uint16_t *field_indices;
-} hid_report_t;
+} hid_report_definition_t;
 
 typedef enum {
     HID_COLL_PHYSICAL,
@@ -76,7 +82,7 @@ typedef struct __attribute((packed)) {
     uint8_t max_reports;
     uint8_t report_count;
     uint16_t max_field_per_report;
-    hid_report_t *reports;
+    hid_report_definition_t *reports_definitions;
 } hid_report_descriptor_t;
 
 void hid_report_descriptor_free(

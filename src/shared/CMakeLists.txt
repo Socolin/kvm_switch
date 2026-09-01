@@ -2,12 +2,13 @@ add_compile_options(-Wall -Wextra)
 add_library(shared
         crc.c
         gpio_utils.c
+        hid_keyboard_report_util.c
         hid_manager.c
+        hid_report_descriptor.c
         logger.c
         node_link.c
         pico_utils.c
         quick_reset_button.c
-        hid_report_descriptor.c
         utils.c
 )
 
