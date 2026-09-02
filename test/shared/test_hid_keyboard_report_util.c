@@ -26,6 +26,7 @@ void tearDown() {
  * Standard boot style keyboard: 8 modifier bits, 1 reserved byte, then a 6 key
  * array. Payload is 8 bytes and uses no Report ID.
  */
+/* AI-generated */
 static const uint8_t keyboard_descriptor[] = {
     0x05, 0x01, // Usage Page (Generic Desktop)
     0x09, 0x06, // Usage (Keyboard)
@@ -53,6 +54,7 @@ static const uint8_t keyboard_descriptor[] = {
 };
 
 /** A device that only declares Generic Desktop fields, so no keycode at all. */
+/* AI-generated */
 static const uint8_t mouse_descriptor[] = {
     0x05, 0x01, // Usage Page (Generic Desktop)
     0x09, 0x02, // Usage (Mouse)
@@ -87,6 +89,7 @@ static const uint8_t mouse_descriptor[] = {
  * carries a 2 key array. The Report ID byte itself is stripped by the caller,
  * so both payloads start at bit 0.
  */
+/* AI-generated */
 static const uint8_t report_ids_descriptor[] = {
     0x05, 0x01, // Usage Page (Generic Desktop)
     0x09, 0x06, // Usage (Keyboard)
@@ -111,6 +114,7 @@ static const uint8_t report_ids_descriptor[] = {
     0xC0, // End Collection
 };
 
+/* AI-generated */
 static hid_report_descriptor_t *parse(
     const uint8_t *descriptor,
     const uint16_t descriptor_len
@@ -120,6 +124,7 @@ static hid_report_descriptor_t *parse(
     return report_descriptor;
 }
 
+/* AI-generated */
 void hid_report_get_pressed_keys__should_return_no_key_for_an_empty_report() {
     hid_report_descriptor_t *report_descriptor = parse(keyboard_descriptor, sizeof(keyboard_descriptor));
     const uint8_t report[8] = {0};
@@ -132,6 +137,7 @@ void hid_report_get_pressed_keys__should_return_no_key_for_an_empty_report() {
     hid_report_descriptor_free(report_descriptor);
 }
 
+/* AI-generated */
 void hid_report_get_pressed_keys__should_report_keys_from_the_key_array() {
     hid_report_descriptor_t *report_descriptor = parse(keyboard_descriptor, sizeof(keyboard_descriptor));
     const uint8_t report[8] = {0x00, 0x00, KEY_A, KEY_B, 0x00, 0x00, 0x00, 0x00};
@@ -146,6 +152,7 @@ void hid_report_get_pressed_keys__should_report_keys_from_the_key_array() {
     hid_report_descriptor_free(report_descriptor);
 }
 
+/* AI-generated */
 /** Each modifier is a 1 bit field, so the bit offset inside the byte matters. */
 void hid_report_get_pressed_keys__should_report_modifier_keys() {
     hid_report_descriptor_t *report_descriptor = parse(keyboard_descriptor, sizeof(keyboard_descriptor));
@@ -161,6 +168,7 @@ void hid_report_get_pressed_keys__should_report_modifier_keys() {
     hid_report_descriptor_free(report_descriptor);
 }
 
+/* AI-generated */
 void hid_report_get_pressed_keys__should_report_modifier_and_array_keys_together() {
     hid_report_descriptor_t *report_descriptor = parse(keyboard_descriptor, sizeof(keyboard_descriptor));
     const uint8_t report[8] = {0x01, 0x00, KEY_C, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -179,6 +187,7 @@ void hid_report_get_pressed_keys__should_report_modifier_and_array_keys_together
  * The reserved byte is a Constant field: it must be skipped, but it still
  * takes 8 bits in the report.
  */
+/* AI-generated */
 void hid_report_get_pressed_keys__should_ignore_the_constant_reserved_byte() {
     hid_report_descriptor_t *report_descriptor = parse(keyboard_descriptor, sizeof(keyboard_descriptor));
     const uint8_t report[8] = {0x00, 0xFF, KEY_A, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -194,6 +203,7 @@ void hid_report_get_pressed_keys__should_ignore_the_constant_reserved_byte() {
 }
 
 /** A device without any keycode field never reports a pressed key. */
+/* AI-generated */
 void hid_report_get_pressed_keys__should_ignore_non_keycode_fields() {
     hid_report_descriptor_t *report_descriptor = parse(mouse_descriptor, sizeof(mouse_descriptor));
     const uint8_t report[3] = {0x01, 0x10, 0xF0}; // button 1 down, X +16, Y -16
@@ -206,6 +216,7 @@ void hid_report_get_pressed_keys__should_ignore_non_keycode_fields() {
     hid_report_descriptor_free(report_descriptor);
 }
 
+/* AI-generated */
 void hid_report_get_pressed_keys__should_only_read_the_fields_of_the_requested_report_id() {
     hid_report_descriptor_t *report_descriptor = parse(report_ids_descriptor, sizeof(report_ids_descriptor));
     const uint8_t modifiers_report[1] = {0x01};
@@ -228,6 +239,7 @@ void hid_report_get_pressed_keys__should_only_read_the_fields_of_the_requested_r
     hid_report_descriptor_free(report_descriptor);
 }
 
+/* AI-generated */
 void hid_report_get_pressed_keys__should_return_no_key_for_an_unknown_report_id() {
     hid_report_descriptor_t *report_descriptor = parse(report_ids_descriptor, sizeof(report_ids_descriptor));
     const uint8_t report[2] = {KEY_D, KEY_E};
@@ -241,6 +253,7 @@ void hid_report_get_pressed_keys__should_return_no_key_for_an_unknown_report_id(
 }
 
 /** More keys pressed than the output buffer holds must not overflow it. */
+/* AI-generated */
 void hid_report_get_pressed_keys__should_not_write_past_the_output_buffer() {
     hid_report_descriptor_t *report_descriptor = parse(keyboard_descriptor, sizeof(keyboard_descriptor));
     const uint8_t report[8] = {0x03, 0x00, KEY_A, KEY_B, KEY_C, KEY_D, KEY_E, KEY_F};
@@ -260,6 +273,7 @@ void hid_report_get_pressed_keys__should_not_write_past_the_output_buffer() {
 }
 
 /** A report shorter than the descriptor announces must not be read past its end. */
+/* AI-generated */
 void hid_report_get_pressed_keys__should_stop_at_the_end_of_a_truncated_report() {
     hid_report_descriptor_t *report_descriptor = parse(keyboard_descriptor, sizeof(keyboard_descriptor));
     const uint8_t report[3] = {0x00, 0x00, KEY_G};

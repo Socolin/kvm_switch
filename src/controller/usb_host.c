@@ -24,7 +24,7 @@ void usb_host_init() {
     usb_host.should_process_actions = true;
 
     const pio_usb_configuration_t pio_cfg = {
-        .pin_dp = 16,
+        .pin_dp = 6, // DM: 7
         .pio_tx_num = PIO_USB_TX_DEFAULT,
         .sm_tx = PIO_SM_USB_TX_DEFAULT,
         .tx_ch = PIO_USB_DMA_TX_DEFAULT,
@@ -38,7 +38,7 @@ void usb_host_init() {
     tuh_configure(BOARD_TUH_RHPORT, TUH_CFGID_RPI_PIO_USB_CONFIGURATION, &pio_cfg);
     tuh_init(BOARD_TUH_RHPORT);
 
-    pio_usb_host_add_port(18, PIO_USB_PINOUT_DPDM);
+    pio_usb_host_add_port(8, PIO_USB_PINOUT_DPDM);
 }
 
 
@@ -167,7 +167,7 @@ void tuh_mount_cb(
 ) {
     logf_debug("dev_addr: %u", dev_addr);
 
-    kvm_switch_controller_enqueue_device_mount(dev_addr);
+    kvm_switch_controller_enqueue_hid_device_mounted(dev_addr);
 
     logf_info("Device %u is mounted", dev_addr);
 }
@@ -177,7 +177,7 @@ void tuh_umount_cb(
 ) {
     logf_debug("dev_addr: %u", dev_addr);
 
-    kvm_switch_controller_enqueue_device_umount(dev_addr);
+    kvm_switch_controller_enqueue_hid_device_unmounted(dev_addr);
 
     logf_info("Device %u is unmounted", dev_addr);
 }

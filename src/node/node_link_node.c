@@ -17,8 +17,8 @@ typedef struct {
 
 static node_link_node_t node = {};
 
-#define SPI_READY_GPIO 6
-#define DATA_READY_GPIO 7
+#define SPI_READY_GPIO 11
+#define DATA_READY_GPIO 10
 
 static void node_link_node_process_received_message(const node_link_msg_t *message, void *udata);
 
@@ -31,7 +31,7 @@ void node_link_node_init() {
     gpio_put(DATA_READY_GPIO, 0);
 
     queue_init(&node.message_queue, sizeof(node_link_msg_t), 16);
-    node_link_init_node(&node.link, spi0, SPI_READY_GPIO, node_link_node_process_received_message);
+    node_link_init_node(&node.link, spi1, SPI_READY_GPIO, node_link_node_process_received_message);
 }
 
 static void node_link_node_signal_data_ready() {

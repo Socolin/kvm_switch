@@ -78,12 +78,12 @@ static void kvm_switch_process_actions() {
     kvm_switch_action_t kvm_switch_action;
     if (queue_try_remove(&kvm_switch.action_queue, &kvm_switch_action)) {
         switch (kvm_switch_action.opcode) {
-            case KVM_SWITCH_CONTROLLER_OP_DEVICE_MOUNT: {
+            case KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_MOUNTED: {
                 kvm_switch.last_device_mounted = time_us_64();
                 kvm_switch.device_mounted_count++;
                 break;
             }
-            case KVM_SWITCH_CONTROLLER_OP_DEVICE_UMOUNT: {
+            case KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_UNMOUNTED: {
                 assert(kvm_switch.device_mounted_count > 0);
                 kvm_switch.device_mounted_count--;
                 break;
@@ -199,6 +199,13 @@ static void kvm_switch_process_actions() {
                 }
                 break;
             }
+            case KVM_SWITCH_CONTROLLER_OP_USB_DEVICE_MOUNTED: {
+                computer_manager_init_computer(LOCAL_COMPUTER_ID);
+                break;
+            }
+            case KVM_SWITCH_CONTROLLER_OP_USB_DEVICE_UNMOUNTED: {
+                break;
+            }
             default:
                 logf_error("Unknown kvm switch action opcode: %u", kvm_switch_action.opcode);
                 break;
@@ -270,13 +277,6 @@ void kvm_switch_controller_computer_set_report(
     }
 }
 
-void kvm_switch_ctrl_usb_device_mounted() {
-    computer_manager_init_computer(LOCAL_COMPUTER_ID);
-}
-
-void kvm_switch_ctrl_usb_device_unmounted() {
-}
-
 // ╔══════════════════════════════════╗
 // ║         KVM switch Action        ║
 // ╚══════════════════════════════════╝
@@ -303,26 +303,32 @@ static bool kvm_switch_node_enqueue_action(
     return queue_try_add(&kvm_switch.action_queue, &action);
 }
 
-bool kvm_switch_controller_enqueue_device_mount(
+bool kvm_switch_controller_enqueue_hid_device_mounted(
     const uint8_t dev_addr
 ) {
     const ksc_action_device_mount_data_t action_data = {
         .dev_addr = dev_addr,
     };
 
-    return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_DEVICE_MOUNT, &action_data,
-                                          sizeof(action_data));
+    return kvm_switch_node_enqueue_action(
+        KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_MOUNTED,
+        &action_data,
+        sizeof(action_data)
+    );
 }
 
-bool kvm_switch_controller_enqueue_device_umount(
+bool kvm_switch_controller_enqueue_hid_device_unmounted(
     const uint8_t dev_addr
 ) {
     const ksc_action_device_umount_data_t action_data = {
         .dev_addr = dev_addr,
     };
 
-    return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_DEVICE_UMOUNT, &action_data,
-                                          sizeof(action_data));
+    return kvm_switch_node_enqueue_action(
+        KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_UNMOUNTED,
+        &action_data,
+        sizeof(action_data)
+    );
 }
 
 bool kvm_switch_controller_enqueue_hid_mount(
@@ -412,4 +418,18 @@ bool kvm_switch_controller_enqueue_computer_ready(
         .computer_id = computer_id,
     };
     return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_COMPUTER_READY, &action_data, sizeof(action_data));
+}
+
+bool kvm_switch_controller_enqueue_usb_device_mounted() {
+    const ksc_usb_device_mounted action_data = {
+    };
+    return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_USB_DEVICE_MOUNTED, &action_data,
+                                          sizeof(action_data));
+}
+
+bool kvm_switch_controller_enqueue_usb_device_unmounted() {
+    const ksc_usb_device_unmounted action_data = {
+    };
+    return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_USB_DEVICE_UNMOUNTED, &action_data,
+                                          sizeof(action_data));
 }

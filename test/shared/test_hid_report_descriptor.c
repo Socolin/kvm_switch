@@ -102,36 +102,43 @@ void hid_report_descriptor_parse__should_parse_examples_keyboard() {
     hid_report_descriptor_parse__should_parse_examples("keyboard");
 }
 
+/* AI-generated */
 /** Sign extended Logical Minimum, and restoring the parent collection on End Collection. */
 void hid_report_descriptor_parse__should_parse_examples_mouse() {
     hid_report_descriptor_parse__should_parse_examples("mouse");
 }
 
+/* AI-generated */
 /** Push saves a copy of the global item state, Pop restores it. */
 void hid_report_descriptor_parse__should_parse_examples_push_pop() {
     hid_report_descriptor_parse__should_parse_examples("push_pop");
 }
 
+/* AI-generated */
 /** Report Count larger than the declared Usage list repeats the last Usage. */
 void hid_report_descriptor_parse__should_parse_examples_usage_list() {
     hid_report_descriptor_parse__should_parse_examples("usage_list");
 }
 
+/* AI-generated */
 /** More declared Usages than MAX_USAGES used to hold. */
 void hid_report_descriptor_parse__should_parse_examples_many_usages() {
     hid_report_descriptor_parse__should_parse_examples("many_usages");
 }
 
+/* AI-generated */
 /** 4 byte Usage items carry their own Usage Page. */
 void hid_report_descriptor_parse__should_parse_examples_usage_page_qualified() {
     hid_report_descriptor_parse__should_parse_examples("usage_page_qualified");
 }
 
+/* AI-generated */
 /** Fields are grouped per (Report ID, report type). */
 void hid_report_descriptor_parse__should_parse_examples_report_ids() {
     hid_report_descriptor_parse__should_parse_examples("report_ids");
 }
 
+/* AI-generated */
 /** Physical range and the 4 bit two's complement Unit Exponent. */
 void hid_report_descriptor_parse__should_parse_examples_dial() {
     hid_report_descriptor_parse__should_parse_examples("dial");
@@ -140,6 +147,7 @@ void hid_report_descriptor_parse__should_parse_examples_dial() {
 // Cases that cannot be expressed through print_report_descriptor, because they
 // are about the parser refusing input rather than about what it produces.
 
+/* AI-generated */
 /**
  * A descriptor that fails to parse must not leave any state behind that breaks
  * the next call: this one opens a collection and then hits an invalid Main tag,
@@ -175,6 +183,7 @@ void hid_report_descriptor_parse__should_not_leak_state_into_the_next_parse() {
     }
 }
 
+/* AI-generated */
 /** An item whose data runs past the end of the descriptor must be rejected. */
 void hid_report_descriptor_parse__should_fail_on_truncated_item() {
     const uint8_t descriptor[] = {
@@ -184,6 +193,7 @@ void hid_report_descriptor_parse__should_fail_on_truncated_item() {
     TEST_ASSERT_NULL(hid_report_descriptor_parse(descriptor, sizeof(descriptor)));
 }
 
+/* AI-generated */
 /** More nesting than COLLECTION_STACK_SIZE must fail cleanly. */
 void hid_report_descriptor_parse__should_fail_on_collection_nested_too_deep() {
     const uint8_t descriptor[] = {
@@ -196,6 +206,7 @@ void hid_report_descriptor_parse__should_fail_on_collection_nested_too_deep() {
     TEST_ASSERT_NULL(hid_report_descriptor_parse(descriptor, sizeof(descriptor)));
 }
 
+/* AI-generated */
 /** End Collection without a matching Collection must fail cleanly. */
 void hid_report_descriptor_parse__should_fail_on_unmatched_end_collection() {
     const uint8_t descriptor[] = {
@@ -205,6 +216,7 @@ void hid_report_descriptor_parse__should_fail_on_unmatched_end_collection() {
     TEST_ASSERT_NULL(hid_report_descriptor_parse(descriptor, sizeof(descriptor)));
 }
 
+/* AI-generated */
 void hid_report_descriptor_is_report_id_present__should_return_true_when_report_id_is_declared() {
     const uint8_t descriptor[] = {
         0x05, 0x01, // Usage Page (Generic Desktop)
@@ -216,6 +228,7 @@ void hid_report_descriptor_is_report_id_present__should_return_true_when_report_
     TEST_ASSERT_TRUE(hid_report_descriptor_is_report_id_present(descriptor, sizeof(descriptor)));
 }
 
+/* AI-generated */
 void hid_report_descriptor_is_report_id_present__should_return_false_when_no_report_id_is_declared() {
     const uint8_t descriptor[] = {
         0x05, 0x01, // Usage Page (Generic Desktop)
@@ -231,6 +244,7 @@ void hid_report_descriptor_is_report_id_present__should_return_false_when_no_rep
  * A Long item's payload must be skipped, not walked into: the 0x85 byte inside
  * it is data, not a Report ID.
  */
+/* AI-generated */
 void hid_report_descriptor_is_report_id_present__should_skip_long_item_payload() {
     const uint8_t descriptor[] = {
         0x05, 0x01, // Usage Page (Generic Desktop)

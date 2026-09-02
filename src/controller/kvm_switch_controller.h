@@ -40,21 +40,19 @@ void kvm_switch_controller_computer_set_report(
     uint16_t report_data_len
 );
 
-void kvm_switch_ctrl_usb_device_mounted();
-
-void kvm_switch_ctrl_usb_device_unmounted();
-
 // ╔══════════════════════════════════╗
 // ║         KVM switch Action        ║
 // ╚══════════════════════════════════╝
 
 typedef enum {
-    KVM_SWITCH_CONTROLLER_OP_DEVICE_MOUNT,
-    KVM_SWITCH_CONTROLLER_OP_DEVICE_UMOUNT,
+    KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_MOUNTED,
+    KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_UNMOUNTED,
     KVM_SWITCH_CONTROLLER_OP_HID_MOUNT,
     KVM_SWITCH_CONTROLLER_OP_HID_UMOUNT,
     KVM_SWITCH_CONTROLLER_OP_HID_REPORT,
     KVM_SWITCH_CONTROLLER_OP_COMPUTER_READY,
+    KVM_SWITCH_CONTROLLER_OP_USB_DEVICE_MOUNTED,
+    KVM_SWITCH_CONTROLLER_OP_USB_DEVICE_UNMOUNTED,
 } kvm_switch_node_action_opcode_t;
 
 typedef struct {
@@ -102,13 +100,19 @@ typedef struct {
     const uint16_t pid;
 } ksc_action_computer_rdy_data_t;
 
+typedef struct {
+} ksc_usb_device_mounted;
+
+typedef struct {
+} ksc_usb_device_unmounted;
+
 /**
  * @param dev_addr Device address (Which port the device is connected. Values: 1, 2)
  * @return
  *   - **true**: if the message was enqueued successfully
  *   - **false**: otherwise
  */
-bool kvm_switch_controller_enqueue_device_mount(
+bool kvm_switch_controller_enqueue_hid_device_mounted(
     uint8_t dev_addr
 );
 
@@ -118,7 +122,7 @@ bool kvm_switch_controller_enqueue_device_mount(
  *   - **true**: if the message was enqueued successfully
  *   - **false**: otherwise
  */
-bool kvm_switch_controller_enqueue_device_umount(
+bool kvm_switch_controller_enqueue_hid_device_unmounted(
     uint8_t dev_addr
 );
 
@@ -179,3 +183,7 @@ bool kvm_switch_controller_enqueue_report(
 bool kvm_switch_controller_enqueue_computer_ready(
     uint8_t computer_id
 );
+
+bool kvm_switch_controller_enqueue_usb_device_mounted();
+
+bool kvm_switch_controller_enqueue_usb_device_unmounted();

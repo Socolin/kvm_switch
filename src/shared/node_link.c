@@ -22,11 +22,6 @@ static void node_link_init(
     link->baud_rate = NODE_LINK_SPI_BAUD_RATE;
 
     memset(link->drain_buffer, 0, sizeof(link->drain_buffer));
-
-    gpio_set_function(2, GPIO_FUNC_SPI);
-    gpio_set_function(3, GPIO_FUNC_SPI);
-    gpio_set_function(4, GPIO_FUNC_SPI);
-    gpio_set_function(5, GPIO_FUNC_SPI);
 }
 
 void node_link_init_controller(
@@ -39,6 +34,11 @@ void node_link_init_controller(
     link->spi_select_gpio = -1;
     link->message_handler = message_handler;
     node_link_init(link, spi);
+
+    gpio_set_function(19, GPIO_FUNC_SPI);
+    gpio_set_function(18, GPIO_FUNC_SPI);
+    gpio_set_function(17, GPIO_FUNC_SPI);
+    gpio_set_function(16, GPIO_FUNC_SPI);
 }
 
 void node_link_init_node(
@@ -52,6 +52,11 @@ void node_link_init_node(
     link->spi_select_gpio = -1;
     link->message_handler = message_handler;
     node_link_init(link, spi);
+
+    gpio_set_function(12, GPIO_FUNC_SPI);
+    gpio_set_function(13, GPIO_FUNC_SPI);
+    gpio_set_function(14, GPIO_FUNC_SPI);
+    gpio_set_function(15, GPIO_FUNC_SPI);
 }
 
 void node_link_spi_select_target(

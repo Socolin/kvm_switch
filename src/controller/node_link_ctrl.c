@@ -41,7 +41,7 @@ void node_link_ctrl_init() {
     node_link_init_controller(&ctrl.link, spi0, node_link_ctrl_process_received_message);
 }
 
-#define RUN_NODES_GPIO 22
+#define RESTART_NODES_GPIO 15
 
 static void node_link_ctrl_irq_handler(
     [[maybe_unused]] uint gpio,
@@ -62,10 +62,10 @@ void node_link_ctrl_restart_nodes() {
         gpio_util_set_handler(computer->spi_ready_gpio, GPIO_IRQ_EDGE_RISE, node_link_ctrl_irq_handler, computer);
     }
 
-    gpio_init(RUN_NODES_GPIO);
-    gpio_set_dir(RUN_NODES_GPIO, GPIO_OUT);
+    gpio_init(RESTART_NODES_GPIO);
+    gpio_set_dir(RESTART_NODES_GPIO, GPIO_OUT);
     sleep_us(10);
-    gpio_set_dir(RUN_NODES_GPIO, GPIO_IN);
+    gpio_set_dir(RESTART_NODES_GPIO, GPIO_IN);
 
     log_info("Waiting for nodes to be ready..");
     for (int i = 1; i < MAX_COMPUTER; i++) {
