@@ -103,10 +103,14 @@
 #define CFG_TUD_CDC               0
 #define CFG_TUD_MSC               0
 #define CFG_TUD_MIDI              0
-#define CFG_TUD_VENDOR            0
+#define CFG_TUD_VENDOR            1
 
 // HID buffer size Should be sufficient to hold ID (if any) + Data
 #define CFG_TUD_HID_EP_BUFSIZE    16
+
+// Vendor class buffer size
+#define CFG_TUD_VENDOR_RX_BUFSIZE 64
+#define CFG_TUD_VENDOR_TX_BUFSIZE 64
 
  //--------------------------------------------------------------------
  // HOST CONFIGURATION

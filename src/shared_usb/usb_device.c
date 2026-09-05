@@ -145,6 +145,7 @@ enum {
     STRID_MANUFACTURER,
     STRID_PRODUCT,
     STRID_SERIAL,
+    STRID_VENDOR,
 };
 
 // array of pointer to string descriptors
@@ -154,6 +155,7 @@ static char const *string_descriptor_array[] =
     "Socolin", // 1: Manufacturer
     "KVM Switch", // 2: Product
     nullptr, // 3: Serials will use unique ID if possible
+    "Configuration", // 4: Vendor
 };
 
 static uint16_t desc_str[32 + 1];
@@ -281,9 +283,17 @@ uint8_t const *tud_descriptor_other_speed_configuration_cb(uint8_t index) {
 
 // ── Configuration and Interface descriptor ───────────────────
 
-#define CONFIG_TOTAL_LEN  (TUD_CONFIG_DESC_LEN + TUD_HID_DESC_LEN * CFG_TUD_HID)
-// Use endpoint 1 as output (& 0x80). Endpoint 0 is reserved for control.
-#define FIST_ENDPOINT_NUM_HID (0x80 | 0x01)
+#define CONFIG_TOTAL_LEN  (                 \
+    TUD_CONFIG_DESC_LEN                     \
+    + (TUD_HID_DESC_LEN * CFG_TUD_HID)        \
+    + (TUD_VENDOR_DESC_LEN * CFG_TUD_VENDOR))
+
+// Use endpoint 1 for config (vendor as output and input) and then next ones for hid  as output (& 0x80).
+// Endpoint 0 is reserved for control.
+// FIXME: Max 15 endpoints on pico 2 ?
+#define FIST_ENDPOINT_NUM_HID (0x80 | 0x02)
+#define EPNUM_VENDOR_OUT   0x01
+#define EPNUM_VENDOR_IN    (0x80 | 0x01)
 static uint8_t configuration_descriptor[CONFIG_TOTAL_LEN];
 
 uint8_t const *tud_descriptor_configuration_cb(uint8_t index) {
@@ -294,6 +304,9 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index) {
         // Config number, interface count, string index, total length, attribute, power in mA
         // FIXME: Should the 100 mA be configurable based on the HID connected ?
         TUD_CONFIG_DESCRIPTOR(1, CFG_TUD_HID, 0, CONFIG_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100),
+#if CFG_TUD_VENDOR
+        TUD_VENDOR_DESCRIPTOR(CFG_TUD_HID + 1, STRID_VENDOR, EPNUM_VENDOR_OUT, EPNUM_VENDOR_IN, 64),
+#endif
     };
     memcpy(configuration_descriptor, base_config_descriptor, sizeof(base_config_descriptor));
 
@@ -335,6 +348,31 @@ uint8_t const *tud_hid_descriptor_report_cb(
         return empty_hid_descriptor;
     return hid->raw_report_descriptor;
 }
+
+
+// ── BOS (Binary Object Store) descriptor──────────────────────
+
+#if CFG_TUD_VENDOR
+
+enum {
+    VENDOR_REQUEST_WEBUSB = 1,
+    VENDOR_REQUEST_MICROSOFT = 2
+};
+
+#define BOS_TOTAL_LEN (TUD_BOS_DESC_LEN + TUD_BOS_WEBUSB_DESC_LEN + TUD_BOS_MICROSOFT_OS_DESC_LEN)
+#define MS_OS_20_DESC_LEN 0xB2
+
+static constexpr uint8_t desc_bos[] = {
+    TUD_BOS_DESCRIPTOR(BOS_TOTAL_LEN, 2),
+    TUD_BOS_WEBUSB_DESCRIPTOR(VENDOR_REQUEST_WEBUSB, 1),
+    TUD_BOS_MS_OS_20_DESCRIPTOR(MS_OS_20_DESC_LEN, VENDOR_REQUEST_MICROSOFT)
+};
+
+uint8_t const *tud_descriptor_bos_cb() {
+    return desc_bos;
+}
+
+#endif
 
 // ┌──────────────────────────────────┐
 // │          Working state           │

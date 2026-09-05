@@ -7,8 +7,14 @@
 
 #include "key_codes.h"
 
+// https://pid.codes/pids/
+// FIXME: Request PID when needed.
+#define USB_VID   0x1209
+#define USB_PID   0x50C0
+
 typedef struct {
     keyboard_shortcut_t keyboard_shortcut[MAX_KEYBOARD_SHORTCUT];
+    general_config_t general_config;
 } kvm_config_t;
 
 static kvm_config_t kvm_config = {};
@@ -20,16 +26,34 @@ void kvm_config_init() {
         kvm_config.keyboard_shortcut[i].enabled = false;
     }
 
+    kvm_config.general_config.vid = USB_VID;
+    kvm_config.general_config.pid = USB_PID;
+
     constexpr uint8_t shortcut_1_keys[] = {HID_KEYBOARD_USAGE_SCROLL_LOCK, HID_KEYBOARD_USAGE_1};
     constexpr uint8_t shortcut_1_data[] = {0};
-    kvm_config_set_shortcut(0, CHANGE_ACTIVE_COMPUTER_SET, 2, shortcut_1_keys, 1, shortcut_1_data);
+    kvm_config_set_shortcut(0, true, CHANGE_ACTIVE_COMPUTER_SET, 2, shortcut_1_keys, 1, shortcut_1_data);
     constexpr uint8_t shortcut_2_keys[] = {HID_KEYBOARD_USAGE_SCROLL_LOCK, HID_KEYBOARD_USAGE_2};
     constexpr uint8_t shortcut_2_data[] = {1};
-    kvm_config_set_shortcut(1, CHANGE_ACTIVE_COMPUTER_SET, 2, shortcut_2_keys, 1, shortcut_2_data);
+    kvm_config_set_shortcut(1, true, CHANGE_ACTIVE_COMPUTER_SET, 2, shortcut_2_keys, 1, shortcut_2_data);
+}
+
+general_config_t *kvm_config_get_general() {
+    return &kvm_config.general_config;
+}
+
+keyboard_shortcut_t *kvm_config_get_shortcut(
+    const uint8_t shortcut_id
+) {
+    if (shortcut_id >= MAX_KEYBOARD_SHORTCUT) {
+        logf_error("Invalid shortcut ID: %d", shortcut_id);
+        return nullptr;
+    }
+    return &kvm_config.keyboard_shortcut[shortcut_id];
 }
 
 void kvm_config_set_shortcut(
     const uint8_t shortcut_id,
+    const bool enabled,
     const shortcut_action_t action,
     const uint8_t key_count,
     const uint8_t *keys,
@@ -52,7 +76,7 @@ void kvm_config_set_shortcut(
     keyboard_shortcut_t *shortcut = &kvm_config.keyboard_shortcut[shortcut_id];
     shortcut->key_count = key_count;
     memcpy(shortcut->keys, keys, key_count);
-    shortcut->enabled = true;
+    shortcut->enabled = enabled;
     shortcut->action = action;
     shortcut->data_len = data_len;
     memcpy(shortcut->data, data, data_len);

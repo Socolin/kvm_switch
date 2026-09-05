@@ -16,12 +16,6 @@
 #include "node_link_ctrl.h"
 #include "usb_host.h"
 
-// https://pid.codes/pids/
-// FIXME: Request PID when needed. Also evaluate possibility to make this configurable to allow to easily change it to
-// avoid hid caching issue on windows.
-#define USB_VID   0x1209
-#define USB_PID   0x50C0
-
 typedef struct {
     uint8_t active_computer_id;
     uint64_t last_device_mounted;
@@ -195,7 +189,8 @@ static void kvm_switch_process_actions() {
                     node_link_ctrl_enqueue_send_hid_mount(data->computer_id, hid);
                 }
                 if (kvm_switch.usb_device_ready) {
-                    node_link_ctrl_enqueue_send_start_usb_device(data->computer_id, USB_VID, USB_PID);
+                    const general_config_t *config = kvm_config_get_general();
+                    node_link_ctrl_enqueue_send_start_usb_device(data->computer_id, config->vid, config->pid);
                 }
                 break;
             }
@@ -223,8 +218,9 @@ void kvm_switch_controller_task() {
         if (kvm_switch.device_mounted_count == 2 || now - kvm_switch.last_device_mounted > 1'000'000) {
             kvm_switch.last_device_mounted = 0;
             kvm_switch.usb_device_ready = true;
-            usb_device_connect_to_computer(BOARD_TUD_RHPORT, USB_VID, USB_PID);
-            node_link_ctrl_enqueue_broadcast_start_usb_device(USB_VID, USB_PID);
+            const general_config_t *config = kvm_config_get_general();
+            usb_device_connect_to_computer(BOARD_TUD_RHPORT, config->vid, config->pid);
+            node_link_ctrl_enqueue_broadcast_start_usb_device(config->vid, config->pid);
         }
     }
 }

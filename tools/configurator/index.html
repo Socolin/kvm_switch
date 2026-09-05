@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<head>
+
+	<title>KVM Configurator</title>
+</head>
+<body>
+<script>
+    async function start() {
+        try {
+            let device = await navigator.usb.requestDevice({filters: [{vendorId: 0x1209}]})
+            console.log(device.productName);
+            console.log(device.manufacturerName);
+            await device.open();
+            if (device.configuration === null)
+	            await device.selectConfiguration(1);
+            let interface_index = device.configuration.interfaces.find(iface => iface.alternate.interfaceClass === 255)?.interfaceNumber;
+            if (!interface_index) {
+                throw new Error("No interface found with class 255");
+			}
+
+            await device.claimInterface(interface_index);
+            //await device.controlTransferOut({requestType: 'vendor', recipient: 'interface', request: 0x22, value: 0x01, index: interface_index}, new Uint8Array([0x42, 0x66]));
+            let result = await device.controlTransferIn({requestType: 'vendor', recipient: 'interface', request: 0x01, value: 0x00, index: interface_index}, 6);
+            console.log(result);
+            console.log(result.data);
+
+            console.log('status:', result.status, 'bytes:', result.data.byteLength);
+            console.log(result.data.getUint16(0, true));
+        } catch (e) {
+            console.error(e);
+        }
+    }
+</script>
+
+<button onclick="start()">start</button>
+</body>

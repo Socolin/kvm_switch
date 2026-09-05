@@ -10,6 +10,7 @@ add_executable(kvm_controller
         kvm_switch_config.c
         kvm_switch_controller.c
         usb_host.c
+        web_usb_handler.c
         ../shared_usb/usb_device.c
 )
 target_link_options(kvm_controller PUBLIC -Wl,--print-memory-usage)

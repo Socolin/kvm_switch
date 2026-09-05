@@ -11,7 +11,7 @@ This project is still in development.
 So far I can use it as a KVM switch. I can select the computer to use with a keyboard shortcut. I was not able to
 test with exotic keyboard / mouse yet, but those should be supported.
 
-The remaining tasks are:
+The remaining tasks are: 
 - Test with 2 nodes (switch between 3 computers).
 - Design PCB for 1 node (and maybe for 2 nodes later)
 - Write documentation
@@ -36,10 +36,10 @@ This project started to fix an issue I had with my current commercial KVM switch
 few things with electronic and discover dev on a microcontroller. Feel free to provide any feedback, as I'm still
 learning.
 
-I first tried to use CH9329 and CH9350 to avoid skipping all the USB parts and get this done quickly. However, during 
+I first tried to use CH9329 and CH9350 to avoid all the USB parts and get this done quickly. However, during 
 my testing I discovered that the CH9329 has a HID descriptor that does not expose all the features I wanted (like the 
 mouse pan) and the CH9350 felt the same way. So I learnt a lot about HID descriptors, tinyUSB, etc… And, now this project
-should support any HID device (not just keyboard and mouse) like Gamepad etc… I kept the code I used to use those chip
+should support any HID device (not just keyboard and mouse) like Gamepad etc… I kept the code I used to use those chips
 in `src/legacy` if anyone need this, feel free to use it 
 
 ## Hardware Architecture

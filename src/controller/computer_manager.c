@@ -132,6 +132,8 @@ bool computer_manager_set_report(
 computer_t *computer_manager_get_computer(
     const uint8_t computer_id
 ) {
-    assert(computer_id < MAX_COMPUTER);
+    if (computer_id >= MAX_COMPUTER) {
+        return nullptr;
+    }
     return &computer_manager.computers[computer_id];
 }
