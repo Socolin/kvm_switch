@@ -21,6 +21,7 @@ pico_enable_stdio_uart(kvm_controller 1)
 target_include_directories(kvm_controller PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
 target_compile_definitions(kvm_controller PRIVATE PIO_USB_USE_TINYUSB)
+target_compile_definitions(kvm_controller PRIVATE KVM_CONTROLLER)
 
 # Link the standard library (gpio, timers, sleep_ms, etc.)
 target_link_libraries(kvm_controller
