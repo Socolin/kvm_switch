@@ -29,7 +29,7 @@ void log_write(
     const char *func,
     uint16_t line,
     const char *message,
-    uint8_t message_len
+    size_t message_len
 );
 
 #define log_critical(message) \
@@ -110,9 +110,9 @@ typedef struct __attribute__((packed)) {
     uint8_t log_level; // log_level_t
     uint16_t line;
     uint8_t func_len; // 0 - 255 (\0 not included)
-    uint8_t func[96];
-    uint8_t message_len; // 0 - 255 (\0 not included)
-    uint8_t message[256];
+    uint8_t func[256];
+    uint8_t msg_len; // 0 - 255 (\0 not included)
+    uint8_t msg[256];
 } log_t;
 
 bool try_dequeue_log(log_t *out_log);

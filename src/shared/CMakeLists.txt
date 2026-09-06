@@ -8,6 +8,7 @@ add_library(shared
         logger.c
         node_link.c
         pico_utils.c
+        ring_buffer.c
         quick_reset_button.c
         utils.c
 )

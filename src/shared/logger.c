@@ -7,22 +7,23 @@
 #include <string.h>
 #include <sys/unistd.h>
 
+#include "ring_buffer.h"
 #include "hardware/timer.h"
 
 typedef struct __attribute__((packed)) {
-    const uint64_t timestamp;
-    const uint8_t log_level; // log_level_t
-    const uint16_t line;
-    const uint8_t func_len;
-    const uint8_t message_len;
+    uint64_t timestamp;
+    uint8_t log_level; // log_level_t
+    uint16_t line;
+    uint8_t func_len;
+    uint8_t message_len;
 } internal_log_t;
 
 typedef struct {
-    char log_buffer[4096];
-    __uint16_t start_position;
-    __uint16_t end_position;
+    ring_buffer_t ring_buffer;
+    uint8_t log_buffer[4096];
     uint8_t min_log_level;
     uint8_t immediate_log_min_log_level;
+    size_t dropped_logs;
 } logger_t;
 
 static logger_t default_logger[NUM_CORES];
@@ -33,64 +34,32 @@ void logger_init(
 ) {
     for (size_t c = 0; c < NUM_CORES; c++) {
         memset(&default_logger[c], 0, sizeof(logger_t));
-        default_logger[c].min_log_level = min_log_level;
-        default_logger[c].immediate_log_min_log_level = immediate_log_min_log_level;
+        logger_t *logger = &default_logger[c];
+        logger->min_log_level = min_log_level;
+        logger->immediate_log_min_log_level = immediate_log_min_log_level;
+        ring_buffer_init(&logger->ring_buffer, logger->log_buffer, sizeof(logger->log_buffer));
     }
 }
 
-static size_t read_bytes_from_log_buffer(
+
+static bool ensure_enough_room_available_in_log_buffer(
     logger_t *logger,
-    const size_t len,
-    uint8_t *bytes,
-    const size_t bytes_len
-) {
-    if (logger->start_position == logger->end_position)
-        return 0;
-    size_t read_count = 0;
-    while (read_count < len) {
-        if (bytes && read_count < bytes_len) {
-            bytes[read_count] = logger->log_buffer[logger->start_position];
-            read_count++;
-        }
-        logger->start_position = (logger->start_position + 1) % sizeof(logger->log_buffer);
-    }
-    return read_count;
-}
-
-static size_t peek_bytes_from_log_buffer(
-    const logger_t *logger,
-    uint8_t *bytes,
     const size_t len
 ) {
-    if (logger->start_position == logger->end_position)
-        return 0;
-    size_t read_count = 0;
-    while (read_count < len) {
-        bytes[read_count] = logger->log_buffer[(logger->start_position + read_count) % sizeof(logger->log_buffer)];
-        read_count++;
-    }
-    return read_count;
-}
+    if (len >= sizeof(logger->log_buffer))
+        return false;
 
-static void write_bytes_to_log_buffer(
-    logger_t *logger,
-    const uint8_t *bytes,
-    const size_t len
-) {
-    size_t written = 0;
-    while (written < len) {
-        logger->log_buffer[logger->end_position] = bytes[written];
-        written++;
-        logger->end_position = (logger->end_position + 1) % sizeof(logger->log_buffer);
+    // If the buffer is full, drop the oldest log from the buffer
+    while (ring_buffer_get_available_space(&logger->ring_buffer) < len) {
+        logger->dropped_logs++;
 
-        // Buffer is full, discard oldest log
-        if (logger->end_position == logger->start_position) {
-            internal_log_t log = {};
-            read_bytes_from_log_buffer(logger, sizeof(log), (uint8_t *) &log, sizeof(log));
-            read_bytes_from_log_buffer(logger, log.func_len, nullptr, 0);
-            read_bytes_from_log_buffer(logger, log.message_len, nullptr, 0);
-        }
+        internal_log_t log = {0};
+        ring_buffer_read(&logger->ring_buffer, (uint8_t *) &log, sizeof(log));
+        ring_buffer_read(&logger->ring_buffer, nullptr, log.func_len);
+        ring_buffer_read(&logger->ring_buffer, nullptr, log.message_len);
     }
+
+    return true;
 }
 
 #if LOG_COLOR
@@ -126,8 +95,11 @@ void log_write(
     const char *func,
     const uint16_t line,
     const char *message,
-    const uint8_t message_len
+    size_t message_len
 ) {
+    if (message_len > 255)
+        message_len = 255;
+
     const internal_log_t log = {
         .timestamp = time_us_64(),
         .log_level = log_level,
@@ -138,16 +110,28 @@ void log_write(
     const uint core_id = get_core_num();
     logger_t *logger = &default_logger[core_id];
     if (logger->min_log_level <= log_level) {
-        write_bytes_to_log_buffer(logger, (const uint8_t *) &log, sizeof(log));
-        write_bytes_to_log_buffer(logger, (const uint8_t *) func, log.func_len);
-        write_bytes_to_log_buffer(logger, (const uint8_t *) message, message_len);
+        if (ensure_enough_room_available_in_log_buffer(logger, sizeof(log) + log.func_len + message_len)) {
+            if (ring_buffer_write(&logger->ring_buffer, (const uint8_t *) &log, sizeof(log)) != sizeof(log)) {
+                panic("Failed to write log header to ring buffer");
+            }
+            if (ring_buffer_write(&logger->ring_buffer, (const uint8_t *) func, log.func_len) != log.func_len) {
+                panic("Failed to write log function name to ring buffer");
+            }
+            if (ring_buffer_write(&logger->ring_buffer, (const uint8_t *) message, message_len) != message_len) {
+                panic("Failed to write log message to ring buffer");
+            }
+        } else {
+            logger->dropped_logs++;
+        }
     }
     if (logger->immediate_log_min_log_level <= log_level) {
 #if LOG_COLOR
-        printf("[%d][%llu][%s][%s:%u] %.*s\n", core_id, log.timestamp, log_level_with_color_to_string(log_level), func, log.line, message_len,
+        printf("[%u][%llu][%s][%s:%u] %.*s\n", core_id, log.timestamp, log_level_with_color_to_string(log_level), func,
+               log.line, message_len,
                message);
 #else
-        printf("[%d][%llu][%s][%s:%u] %.*s\n", core_id, log.timestamp, log_level_to_string(log_level), func, log.line, message_len, message);
+        printf("[%u][%llu][%s][%s:%u] %.*s\n", core_id, log.timestamp, log_level_to_string(log_level), func, log.line,
+               message_len, message);
 #endif
     }
 }
@@ -169,7 +153,7 @@ void log_hex_buffer(
         size_t str_size = 6;
         for (size_t i = 0; i < 16; i++) {
             if (data_offset + i < data_len)
-                snprintf(message_buffer + str_size, 4, "%02x ", ((const uint8_t*)data)[data_offset + i]);
+                snprintf(message_buffer + str_size, 4, "%02x ", ((const uint8_t *) data)[data_offset + i]);
             else
                 snprintf(message_buffer + str_size, 4, "   ");
             str_size += 3;
@@ -182,7 +166,7 @@ void log_hex_buffer(
         str_size += 3;
         for (size_t i = 0; i < 16; i++) {
             if (data_offset + i < data_len) {
-                const uint8_t c = ((const uint8_t*)data)[data_offset + i];
+                const uint8_t c = ((const uint8_t *) data)[data_offset + i];
                 message_buffer[str_size] = isprint(c) ? c : '.';
                 str_size += 1;
             }
@@ -226,16 +210,25 @@ void log_write_format(
     const uint core_id = get_core_num();
     logger_t *logger = &default_logger[core_id];
     if (logger->min_log_level <= log_level) {
-        write_bytes_to_log_buffer(logger, (const uint8_t *) &log, sizeof(log));
-        write_bytes_to_log_buffer(logger, (const uint8_t *) func, log.func_len);
-        write_bytes_to_log_buffer(logger, (const uint8_t *) message_buffer, message_len);
+        if (ensure_enough_room_available_in_log_buffer(logger, sizeof(log) + log.func_len + message_len)) {
+            if (ring_buffer_write(&logger->ring_buffer, (const uint8_t *) &log, sizeof(log)) != sizeof(log))
+                panic("Failed to write log header to ring buffer");
+            if (ring_buffer_write(&logger->ring_buffer, (const uint8_t *) func, log.func_len) != log.func_len)
+                panic("Failed to write log function name to ring buffer");
+            if (ring_buffer_write(&logger->ring_buffer, (const uint8_t *) message_buffer, message_len) != (size_t)message_len)
+                panic("Failed to write log message to ring buffer");
+        } else {
+            logger->dropped_logs++;
+        }
     }
     if (logger->immediate_log_min_log_level <= log_level) {
 #if LOG_COLOR
-        printf("[%d][%llu][%s][%s:%u] %.*s\n", core_id, log.timestamp, log_level_with_color_to_string(log_level), func, line, message_len,
+        printf("[%u][%llu][%s][%s:%u] %.*s\n", core_id, log.timestamp, log_level_with_color_to_string(log_level), func,
+               line, message_len,
                message_buffer);
 #else
-        printf("[%d][%llu][%s][%s:%u] %.*s\n", core_id, log.timestamp, log_level_to_string(log_level), func, log.line, message_len,
+        printf("[%u][%llu][%s][%s:%u] %.*s\n", core_id, log.timestamp, log_level_to_string(log_level), func, log.line,
+               message_len,
                message_buffer);
 #endif
     }
@@ -251,12 +244,15 @@ bool try_dequeue_log(
     logger_t *logger = nullptr;
     uint64_t min_timestamp = (uint64_t) -1;
     for (size_t c = 0; c < NUM_CORES; c++) {
+        internal_log_t log = {0};
         logger_t *core_logger = &default_logger[c];
-        const size_t read_count = peek_bytes_from_log_buffer(core_logger, (uint8_t *) out_log, sizeof(*out_log));
+        if (ring_buffer_get_length(&core_logger->ring_buffer) == 0)
+            continue;
+        const size_t read_count = ring_buffer_peek(&core_logger->ring_buffer, (uint8_t *) &log, sizeof(log));
         if (read_count == 0)
             continue;
-        if (out_log->timestamp < min_timestamp) {
-            min_timestamp = out_log->timestamp;
+        if (log.timestamp < min_timestamp) {
+            min_timestamp = log.timestamp;
             logger = core_logger;
         }
     }
@@ -265,34 +261,36 @@ bool try_dequeue_log(
         return false;
 
     // Read metadata
-    const size_t read_count = read_bytes_from_log_buffer(
-        logger,
-        sizeof(*out_log),
-        (uint8_t *) &out_log,
-        sizeof(*out_log)
+    internal_log_t log = {0};
+    const size_t read_count = ring_buffer_read(
+        &logger->ring_buffer,
+        (uint8_t *) &log,
+        sizeof(log)
     );
-    if (read_count != sizeof(log_t))
+    if (read_count != sizeof(log))
         return false;
 
+    out_log->timestamp = log.timestamp;
+    out_log->log_level = log.log_level;
+    out_log->line = log.line;
+
     // Read func
-    const size_t func_read_count = read_bytes_from_log_buffer(
-        logger,
-        out_log->func_len,
+    const size_t func_read_count = ring_buffer_read(
+        &logger->ring_buffer,
         out_log->func,
-        sizeof(out_log->func) - 1
+        log.func_len
     );
     out_log->func_len = func_read_count;
     out_log->func[func_read_count] = '\0';
 
     // Read message
-    const size_t message_read_count = read_bytes_from_log_buffer(
-        logger,
-        out_log->message_len,
-        out_log->message,
-        sizeof(out_log->message) - 1
+    const size_t message_read_count = ring_buffer_read(
+        &logger->ring_buffer,
+        out_log->msg,
+        log.message_len
     );
-    out_log->message_len = message_read_count;
-    out_log->message[message_read_count] = '\0';
+    out_log->msg_len = message_read_count;
+    out_log->msg[message_read_count] = '\0';
 
     return true;
 }
