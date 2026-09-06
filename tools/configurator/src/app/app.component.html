@@ -1,0 +1,104 @@
+<mat-toolbar>
+  <span>KVM Configurator</span>
+  @if (!kvmSwitchState.webUsbConnection()) {
+    <button color="primary" mat-button (click)="kvmSwitchState.connectToKvm()">
+      Connect to KVM
+    </button>
+  } @else {
+    <button color="primary" mat-button (click)="kvmSwitchState.refresh()">
+      Refresh
+    </button>
+    <button color="primary" mat-button (click)="kvmSwitchState.connectToKvm()">
+      Select another KVM
+    </button>
+  }
+</mat-toolbar>
+<div class="content">
+
+  <div class="keyboard-shortcuts">
+    @if (kvmSwitchState.keyboardShortcuts.hasValue()) {
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>
+            Keyboard Shortcuts
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+
+          @for (shortcut of kvmSwitchState.keyboardShortcuts.value(); track shortcut.shortcutId) {
+            @if (shortcut.enabled) {
+              <div>
+                Shortcut ID: {{ shortcut.shortcutId }}
+                Enabled: {{ shortcut.enabled }}
+                Action: {{ shortcut.action }}
+                Key Count: {{ shortcut.keyCount }}
+                Keys: {{ shortcut.keys }}
+                Data Length: {{ shortcut.dataLen }}
+                Data: {{ shortcut.data }}
+              </div>
+            }
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+
+  <div class="side">
+
+    <div class="computer-states">
+      @if (kvmSwitchState.computerStates.hasValue()) {
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>
+              Computers
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+
+            @for (computerState of kvmSwitchState.computerStates.value(); track computerState.computerId) {
+              <div>
+                Id: {{ computerState.computerId }}
+                State: {{ computerState.state }}
+                State: {{ computerState.hidProtocolPerInterface }}
+
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+
+    <div class="hid-devices">
+      @if (this.kvmSwitchState.hidInterfaces.hasValue()) {
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>
+              HID Devices
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            @for (entry of Object.entries(hidDevices()); track entry[0]) {
+              <app-hid-device [device]="entry[1]"></app-hid-device>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+  </div>
+
+
+  <div class="logs">
+    @if (kvmSwitchState.logs().length > 0) {
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>Logs</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <app-kmv-logs [logs]="kvmSwitchState.logs()"></app-kmv-logs>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+
+</div>
+

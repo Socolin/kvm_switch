@@ -1,6 +1,7 @@
 #include "web_usb_handler.h"
 
 #include "computer_manager.h"
+#include "hid_device_manager.h"
 #include "hid_manager.h"
 #include "logger.h"
 #include "utils.h"
@@ -22,19 +23,18 @@ static bool write_to_buffer(
         return false;
     }
     memcpy(buffer + *offset, data, data_len);
-    *offset += data_len;
+    *offset = *offset + data_len;
     return true;
 }
 
 #define write_value_to_buffer(buffer, buffer_size, offset, data) \
-    write_to_buffer(buffer,  buffer_size, offset, &data, sizeof(data))
+    write_to_buffer(buffer, buffer_size, offset, &data, sizeof(data))
 
 bool tud_vendor_control_xfer_cb(
     const uint8_t rhport,
     const uint8_t stage,
     tusb_control_request_t const *request
 ) {
-    logf_debug("rhport: %u, stage: %u", rhport, stage);
     if (request->bmRequestType_bit.type != TUSB_REQ_TYPE_VENDOR)
         return false;
 
@@ -54,6 +54,7 @@ bool tud_vendor_control_xfer_cb(
                         data->protocol_version = WEB_USB_PROTOCOL_VERSION;
                         data->computer_count = MAX_COMPUTER;
                         data->hid_interface_count = CFG_TUD_HID;
+                        data->hid_device_count = MAX_HID_DEVICE;
                         return tud_control_xfer(rhport, request, data, sizeof(*data));
                     }
                     case COMMAND_IN_OP_GET_COMPUTER_STATE: {
@@ -68,21 +69,42 @@ bool tud_vendor_control_xfer_cb(
                                CFG_TUD_HID * sizeof(uint8_t));
                         return tud_control_xfer(rhport, request, data, sizeof(*data));
                     }
+                    case COMMAND_IN_OP_GET_HID_DEVICE: {
+                        auto const data = (web_usb_cmd_get_hid_device_data_t *) vendor_data_in_buffer;
+                        const hid_device_t *hid_device = hid_device_manager_get(request->wValue);
+                        if (hid_device == nullptr) {
+                            memset(data, 0, sizeof(*data));
+                        return tud_control_xfer(rhport, request, data, sizeof(*data));
+                        } else {
+                            data->dev_addr = hid_device->dev_addr;
+                            data->is_mounted = hid_device->is_mounted;
+
+                            const size_t buffer_size = min16(sizeof(vendor_data_in_buffer), request->wLength);
+                            size_t offset = sizeof(web_usb_cmd_get_hid_device_data_t);
+                            uint8_t *buffer = vendor_data_in_buffer;
+                            write_value_to_buffer(buffer, buffer_size, &offset, hid_device->manufacturer_name_len);
+                            write_to_buffer(buffer, buffer_size, &offset, hid_device->manufacturer_name, hid_device->manufacturer_name_len);
+                            write_value_to_buffer(buffer, buffer_size, &offset, hid_device->product_name_len);
+                            write_to_buffer(buffer, buffer_size, &offset, hid_device->product_name, hid_device->product_name_len);
+                            return tud_control_xfer(rhport, request, data, offset);
+                        }
+                    }
                     case COMMAND_IN_OP_GET_HID_STATE: {
                         auto const data = (web_usb_cmd_get_hid_state_data_t *) vendor_data_in_buffer;
                         const hid_t *hid = hid_mgr_get_by_kvm_idx(request->wValue);
-                        if (hid == nullptr)
-                            return false;
-
-                        data->enabled = hid->enabled;
-                        data->dev_addr = hid->dev_addr;
-                        data->host_hid_idx = hid->host_hid_idx;
-                        data->kvm_hid_idx = hid->kvm_hid_idx;
-                        data->itf_protocol = hid->itf_protocol;
-                        data->use_report_id = hid->use_report_id;
-                        data->has_keyboard_report = hid->has_keyboard_report;
-                        data->vid = hid->vid;
-                        data->pid = hid->pid;
+                        if (hid == nullptr) {
+                            memset(data, 0, sizeof(*data));
+                        } else {
+                            data->enabled = hid->enabled;
+                            data->dev_addr = hid->dev_addr;
+                            data->host_hid_idx = hid->host_hid_idx;
+                            data->kvm_hid_idx = hid->kvm_hid_idx;
+                            data->itf_protocol = hid->itf_protocol;
+                            data->use_report_id = hid->use_report_id;
+                            data->has_keyboard_report = hid->has_keyboard_report;
+                            data->vid = hid->vid;
+                            data->pid = hid->pid;
+                        }
                         return tud_control_xfer(rhport, request, data, sizeof(*data));
                     }
                     case COMMAND_IN_OP_GET_HID_DESCRIPTOR: {
@@ -131,19 +153,24 @@ bool tud_vendor_control_xfer_cb(
 
                         log_t log;
                         while (try_dequeue_log(&log)) {
-                            size_t last_offset = offset;
-                            write_value_to_buffer(buffer, buffer_size, &offset, log.timestamp);
-                            write_value_to_buffer(buffer, buffer_size, &offset, log.log_level);
-                            write_value_to_buffer(buffer, buffer_size, &offset, log.line);
-                            write_value_to_buffer(buffer, buffer_size, &offset, log.func_len);
-                            write_value_to_buffer(buffer, buffer_size, &offset, log.message_len);
-                            write_to_buffer(buffer, buffer_size, &offset, log.func, log.func_len);
-                            if (!write_to_buffer(buffer, buffer_size, &offset, log.message, log.message_len)) {
+                            const size_t last_offset = offset;
+                            bool success = true;
+                            success = success && write_value_to_buffer(buffer, buffer_size, &offset, log.timestamp);
+                            success = success && write_value_to_buffer(buffer, buffer_size, &offset, log.log_level);
+                            success = success && write_value_to_buffer(buffer, buffer_size, &offset, log.line);
+                            success = success && write_value_to_buffer(buffer, buffer_size, &offset, log.func_len);
+                            success = success && write_to_buffer(buffer, buffer_size, &offset, log.func, log.func_len);
+                            success = success && write_value_to_buffer(buffer, buffer_size, &offset, log.msg_len);
+                            success = success && write_to_buffer(buffer, buffer_size, &offset, log.msg, log.msg_len);
+                            if (!success) {
                                 // Last log is lost if this happen (it should not) if this happen we'll fix this
-                                log_error("Failed to write log message to buffer");
+                                logf_error("Failed to write log message to buffer: buffer_size=%u, offset=%u",
+                                           buffer_size, offset);
                                 offset = last_offset;
                                 break;
                             }
+                            if (buffer_size - offset <= sizeof(log_t))
+                                break;
                         }
 
                         return tud_control_xfer(rhport, request, buffer, offset);

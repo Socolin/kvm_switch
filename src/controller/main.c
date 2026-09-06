@@ -1,3 +1,4 @@
+#include "hid_device_manager.h"
 #if !PICO_RP2350
 #error "This targets the Pico 2 (RP2350) only"
 #endif
@@ -85,6 +86,7 @@ int main() {
     computer_manager_init();
     computer_manager_configure_computer(1, 22, 20, 21);
 
+    hid_device_manager_init();
     hid_mgr_init();
     kvm_config_init();
     kvm_switch_controller_init();

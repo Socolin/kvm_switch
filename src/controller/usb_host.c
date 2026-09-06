@@ -11,6 +11,8 @@
 #include "kvm_switch_controller.h"
 #include "logger.h"
 
+#define LANGUAGE_ID 0x0409
+
 typedef struct {
     queue_t action_queue;
     // When an action is already in progress, we cannot process any other actions
@@ -79,6 +81,42 @@ static void usb_host_process_action() {
                 return;
             }
             usb_host.should_process_actions = false;
+            break;
+        }
+        case HID_REQUEST_MANUFACTURER_STRING: {
+            uint16_t buffer[128];
+            auto const data = (hid_action_request_manufacturer_string_t *) hid_action.data;
+            const uint8_t result = tuh_descriptor_get_manufacturer_string_sync(
+                data->dev_addr,
+                LANGUAGE_ID,
+                buffer,
+                sizeof(buffer)
+            );
+            if (result == XFER_RESULT_SUCCESS) {
+                kvm_switch_controller_enqueue_hid_device_manufacturer_str(
+                    data->dev_addr,
+                    buffer + 1,
+                    buffer[0] & 0xFF
+                );
+            }
+            break;
+        }
+        case HID_REQUEST_PRODUCT_STRING: {
+            uint16_t buffer[128];
+            auto const data = (hid_action_request_product_string_t *) hid_action.data;
+            const uint8_t result = tuh_descriptor_get_product_string_sync(
+                data->dev_addr,
+                LANGUAGE_ID,
+                buffer,
+                sizeof(buffer)
+            );
+            if (result == XFER_RESULT_SUCCESS) {
+                kvm_switch_controller_enqueue_hid_device_product_str(
+                    data->dev_addr,
+                    buffer + 1,
+                    buffer[0] & 0xFF
+                );
+            }
             break;
         }
         default:
@@ -156,6 +194,27 @@ bool usb_host_enqueue_set_report(
     return usb_host_enqueue_hid_action(HID_SET_REPORT, &action_data, sizeof(action_data));
 }
 
+bool usb_host_enqueue_request_manufacturer_string(
+    const uint8_t dev_addr
+) {
+    const hid_action_request_manufacturer_string_t action_data = {
+        .dev_addr = dev_addr,
+    };
+
+    return usb_host_enqueue_hid_action(HID_REQUEST_MANUFACTURER_STRING, &action_data, sizeof(action_data));
+}
+
+bool usb_host_enqueue_request_product_string(
+    const uint8_t dev_addr
+) {
+    const hid_action_request_product_string_t action_data = {
+        .dev_addr = dev_addr,
+    };
+
+    return usb_host_enqueue_hid_action(HID_REQUEST_PRODUCT_STRING, &action_data, sizeof(action_data));
+}
+
+
 // ╔══════════════════════════════════╗
 // ║         tinyusb callbacks        ║
 // ╚══════════════════════════════════╝
@@ -168,6 +227,8 @@ void tuh_mount_cb(
     logf_debug("dev_addr: %u", dev_addr);
 
     kvm_switch_controller_enqueue_hid_device_mounted(dev_addr);
+    usb_host_enqueue_request_manufacturer_string(dev_addr);
+    usb_host_enqueue_request_product_string(dev_addr);
 
     logf_info("Device %u is mounted", dev_addr);
 }

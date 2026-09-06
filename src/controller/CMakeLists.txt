@@ -5,6 +5,7 @@ add_executable(kvm_controller
         ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
 
         main.c
+        hid_device_manager.c
         computer_manager.c
         node_link_ctrl.c
         kvm_switch_config.c

@@ -1,0 +1,11 @@
+
+<table class="logs-table mat-shadow-2">
+  @for (log of logs(); track $index) {
+    <tr>
+      <td>{{log.timestamp}}</td>
+      <td class="log-level log-level-{{logLevelToString(log.logLevel)}}">{{logLevelToString(log.logLevel)}}</td>
+      <td>{{log.function}}:{{log.line}}</td>
+      <td>{{log.message}}</td>
+    </tr>
+  }
+</table>

@@ -1,0 +1,39 @@
+<h4>Device {{ device().devAddr }}</h4>
+@if (device().manufacturerName) {
+  <div>
+    Manufacturer: {{ device().manufacturerName }}
+  </div>
+}
+@if (device().productName) {
+  <div>
+    Product: {{ device().productName }}
+  </div>
+}
+<div>
+  VID: <code>0x{{ device().vid.toString(16).padStart(4, '0') }}</code> - {{ vendorName() }}
+</div>
+<div>
+  PID: <code>0x{{ device().pid.toString(16).padStart(4, '0') }}</code>
+</div>
+<div>
+  Interfaces:
+  <mat-accordion>
+    @for (hidInterface of device().hidInterfaces; track hidInterface.kvmHidIdx) {
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <mat-panel-title>HID: Host index: {{ hidInterface.hostHidIdx }} - Kvm Index: {{ hidInterface.kvmHidIdx }}
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <div>
+          Has Keyboard Report: {{ hidInterface.hasKeyboardReport }}
+        </div>
+        <div>
+          Use Report Id: {{ hidInterface.useReportId }}
+        </div>
+        <div>
+          Interface Protocol: {{ getItfProtocolName(hidInterface.itfProtocol) }} ({{ hidInterface.itfProtocol }})
+        </div>
+      </mat-expansion-panel>
+    }
+  </mat-accordion>
+</div>

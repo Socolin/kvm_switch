@@ -11,6 +11,7 @@
 #include "../shared_usb/usb_device.h"
 
 #include "computer_manager.h"
+#include "hid_device_manager.h"
 #include "hid_keyboard_report_util.h"
 #include "kvm_switch_config.h"
 #include "node_link_ctrl.h"
@@ -98,11 +99,23 @@ static void kvm_switch_process_actions() {
                     const hid_t *hid = hid_mgr_get_by_host_idx(data->dev_addr, data->host_hid_idx);
                     node_link_ctrl_enqueue_broadcast_hid_mount(hid);
                 }
+                hid_device_manager_mount_device(data->dev_addr);
                 break;
             }
             case KVM_SWITCH_CONTROLLER_OP_HID_UMOUNT: {
                 auto const data = (ksc_action_hid_umount_data_t *) kvm_switch_action.data;
                 hid_mgr_unregister_hid(data->dev_addr, data->host_hid_idx);
+                hid_device_manager_unmount_device(data->dev_addr);
+                break;
+            }
+            case KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_MANUFACTURER_STR: {
+                auto const data = (ksc_action_hid_device_manufacturer_str_data_t *) kvm_switch_action.data;
+                hid_device_manager_set_manufacturer_name(data->dev_addr, data->string, data->string_len);
+                break;
+            }
+            case KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_PRODUCT_STR: {
+                auto const data = (ksc_action_hid_device_product_str_data_t *) kvm_switch_action.data;
+                hid_device_manager_set_product_name(data->dev_addr, data->string, data->string_len);
                 break;
             }
             case KVM_SWITCH_CONTROLLER_OP_HID_REPORT: {
@@ -281,7 +294,6 @@ static bool kvm_switch_node_enqueue_action(
     const kvm_switch_node_action_opcode_t opcode,
     const void *data,
     const size_t data_len
-
 ) {
     logf_debug("opcode: %u, data_len: %u", opcode, data_len);
     kvm_switch_action_t action = {
@@ -322,6 +334,43 @@ bool kvm_switch_controller_enqueue_hid_device_unmounted(
 
     return kvm_switch_node_enqueue_action(
         KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_UNMOUNTED,
+        &action_data,
+        sizeof(action_data)
+    );
+}
+
+bool kvm_switch_controller_enqueue_hid_device_manufacturer_str(
+    const uint8_t dev_addr,
+    const uint16_t *string,
+    const uint8_t string_len
+) {
+    logf_debug("dev_addr: %u", dev_addr);
+    ksc_action_hid_device_manufacturer_str_data_t action_data = {
+        .dev_addr = dev_addr,
+        .string_len = string_len,
+    };
+    memcpy(action_data.string, string, string_len);
+
+    return kvm_switch_node_enqueue_action(
+        KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_MANUFACTURER_STR,
+        &action_data,
+        sizeof(action_data)
+    );
+}
+
+bool kvm_switch_controller_enqueue_hid_device_product_str(
+    const uint8_t dev_addr,
+    const uint16_t *string,
+    const uint8_t string_len
+) {
+    logf_debug("dev_addr: %u", dev_addr);
+    ksc_action_hid_device_product_str_data_t action_data = {
+        .dev_addr = dev_addr,
+        .string_len = string_len,
+    };
+    memcpy(action_data.string, string, string_len);
+    return kvm_switch_node_enqueue_action(
+        KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_PRODUCT_STR,
         &action_data,
         sizeof(action_data)
     );
@@ -417,14 +466,14 @@ bool kvm_switch_controller_enqueue_computer_ready(
 }
 
 bool kvm_switch_controller_enqueue_usb_device_mounted() {
-    const ksc_usb_device_mounted action_data = {
+    const ksc_action_usb_device_mounted_data_t action_data = {
     };
     return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_USB_DEVICE_MOUNTED, &action_data,
                                           sizeof(action_data));
 }
 
 bool kvm_switch_controller_enqueue_usb_device_unmounted() {
-    const ksc_usb_device_unmounted action_data = {
+    const ksc_action_usb_device_unmounted_data_t action_data = {
     };
     return kvm_switch_node_enqueue_action(KVM_SWITCH_CONTROLLER_OP_USB_DEVICE_UNMOUNTED, &action_data,
                                           sizeof(action_data));

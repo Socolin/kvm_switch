@@ -18,6 +18,8 @@ void usb_host_task();
 typedef enum {
     HID_SET_REPORT,
     HID_SET_PROTOCOL,
+    HID_REQUEST_MANUFACTURER_STRING,
+    HID_REQUEST_PRODUCT_STRING,
 } hid_action_opcode_t;
 
 typedef struct {
@@ -34,6 +36,14 @@ typedef struct {
     const uint8_t host_hid_idx; /**< HID interface index on USB Host side (Where the keyboard / mouse are connected) */
     const uint8_t hid_protocol; /**< The HID protocol (boot / report) \see hid_protocol_mode_enum_t */
 } hid_action_set_protocol_t;
+
+typedef struct {
+    const uint8_t dev_addr; /**< Device address (Which port the device is connected. Values: 1, 2) */
+} hid_action_request_manufacturer_string_t;
+
+typedef struct {
+    const uint8_t dev_addr; /**< Device address (Which port the device is connected. Values: 1, 2) */
+} hid_action_request_product_string_t;
 
 typedef struct {
     hid_action_opcode_t opcode;
@@ -74,4 +84,12 @@ bool usb_host_enqueue_set_report(
     uint8_t report_type,
     uint8_t const *report_data,
     uint16_t report_data_len
+);
+
+bool usb_host_enqueue_request_manufacturer_string(
+    uint8_t dev_addr
+);
+
+bool usb_host_enqueue_request_product_string(
+    uint8_t dev_addr
 );

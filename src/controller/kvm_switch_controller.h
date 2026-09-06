@@ -47,6 +47,8 @@ void kvm_switch_controller_computer_set_report(
 typedef enum {
     KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_MOUNTED,
     KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_UNMOUNTED,
+    KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_MANUFACTURER_STR,
+    KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_PRODUCT_STR,
     KVM_SWITCH_CONTROLLER_OP_HID_MOUNT,
     KVM_SWITCH_CONTROLLER_OP_HID_UMOUNT,
     KVM_SWITCH_CONTROLLER_OP_HID_REPORT,
@@ -58,7 +60,7 @@ typedef enum {
 typedef struct {
     kvm_switch_node_action_opcode_t opcode;
     size_t data_len;
-    uint8_t data[128];
+    uint8_t data[300];
 } kvm_switch_action_t;
 
 typedef struct __attribute__((packed)) {
@@ -84,6 +86,18 @@ typedef struct {
     const uint8_t dev_addr; /**< Device address (Which port the device is connected. Values: 1, 2) */
 } ksc_action_device_umount_data_t;
 
+typedef struct {
+    uint8_t dev_addr;
+    uint8_t string_len;
+    uint16_t string[128];
+} ksc_action_hid_device_manufacturer_str_data_t;
+
+typedef struct {
+    uint8_t dev_addr;
+    uint8_t string_len;
+    uint16_t string[128];
+} ksc_action_hid_device_product_str_data_t;
+
 typedef struct __attribute__((packed)) {
     const uint8_t dev_addr; /**< Device address (Which port the device is connected. Values: 1, 2) */
     const uint8_t host_hid_idx; /**< HID interface index on USB Host side (Where the keyboard / mouse are connected) */
@@ -91,7 +105,7 @@ typedef struct __attribute__((packed)) {
     const uint8_t hid_protocol; /**< HID protocol (boot / report) \see hid_protocol_mode_enum_t */
     const uint8_t report_id; /**< The report ID if any. 0 = no report id */
     const uint16_t report_data_len; /**< The length of the report data */
-    uint8_t report_data[96]; /**< The report data */
+    uint8_t report_data[128]; /**< The report data */
 } ksc_action_hid_report_data_t;
 
 typedef struct {
@@ -101,10 +115,10 @@ typedef struct {
 } ksc_action_computer_rdy_data_t;
 
 typedef struct {
-} ksc_usb_device_mounted;
+} ksc_action_usb_device_mounted_data_t;
 
 typedef struct {
-} ksc_usb_device_unmounted;
+} ksc_action_usb_device_unmounted_data_t;
 
 /**
  * @param dev_addr Device address (Which port the device is connected. Values: 1, 2)
@@ -124,6 +138,18 @@ bool kvm_switch_controller_enqueue_hid_device_mounted(
  */
 bool kvm_switch_controller_enqueue_hid_device_unmounted(
     uint8_t dev_addr
+);
+
+bool kvm_switch_controller_enqueue_hid_device_manufacturer_str(
+    uint8_t dev_addr,
+    const uint16_t *string,
+    uint8_t string_len
+);
+
+bool kvm_switch_controller_enqueue_hid_device_product_str(
+    uint8_t dev_addr,
+    const uint16_t *string,
+    uint8_t string_len
 );
 
 /**

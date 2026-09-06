@@ -1,0 +1,19 @@
+.logs-table {
+  font-family: monospace;
+  .log-level-Debug {
+    color: gray;
+  }
+  .log-level-Info {
+    color: green;
+  }
+  .log-level-Warning {
+    color: orange;
+  }
+  .log-level-Error {
+    color: darkred;
+  }
+  .log-level-Critical {
+    color: white;
+    background: darkred;
+  }
+}
