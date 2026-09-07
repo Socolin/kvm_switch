@@ -83,8 +83,7 @@ bool computer_manager_set_report(
 
     computer_hid_report_t *itr = computer->hid_reports_per_interface[kvm_hid_idx];
     while (itr != nullptr) {
-        // FIXME: Should we check report_type?
-        if (itr->report_id == report_id) {
+        if (itr->report_id == report_id && itr->report_type == report_type) {
             saved_report = itr;
             break;
         }
