@@ -1,0 +1,17 @@
+.shortcut {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+}
+.shortcut-keys {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+.keyboard-key {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--mat-sys-primary);
+}

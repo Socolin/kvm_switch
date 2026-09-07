@@ -4,12 +4,13 @@ import { MatCard, MatCardContent, MatCardHeader, MatCardSubtitle, MatCardTitle }
 import { MatDivider } from '@angular/material/list';
 import { MatToolbar } from '@angular/material/toolbar';
 import { DeviceInfo, HidDeviceComponent } from './hid-device.component';
+import { KeyboardShortcutComponent } from './keyboard-shortcut.component';
 import { KmvLogsComponent } from './kmv-logs.component';
 import { KvmSwitchState } from './kvm-switch-state';
 
 
 @Component({
-  imports: [MatButton, MatCard, MatCardHeader, MatCardContent, MatCardTitle, MatToolbar, MatCardSubtitle, HidDeviceComponent, KmvLogsComponent, MatDivider],
+  imports: [MatButton, MatCard, MatCardHeader, MatCardContent, MatCardTitle, MatToolbar, MatCardSubtitle, HidDeviceComponent, KmvLogsComponent, MatDivider, KeyboardShortcutComponent],
   selector: 'app-root',
   styleUrl: './app.component.scss',
   templateUrl: './app.component.html'

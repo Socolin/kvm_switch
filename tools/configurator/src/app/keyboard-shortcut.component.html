@@ -1,0 +1,12 @@
+@let action = actions[shortcut().action];
+@let actionDescription = action?.formatDescription(shortcut().data);
+<div class="shortcut">
+  <div class="shortcut-keys">
+    @for (keyCode of shortcut().keys; track $index) {
+      <div class="keyboard-key" [matTooltip]="keyCodes[keyCode].name">
+        {{ keyCodes[keyCode].text }}
+      </div>
+    }
+  </div>
+  {{ actionDescription ?? action.name }}
+</div>

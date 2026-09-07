@@ -18,29 +18,16 @@
   <section class="keyboard-shortcuts">
     @if (kvmSwitchState.keyboardShortcuts.hasValue()) {
       <h2>Keyboard Shortcuts</h2>
-      <mat-card>
-        <mat-card-header>
-          <mat-card-title>
 
-          </mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-
-          @for (shortcut of kvmSwitchState.keyboardShortcuts.value(); track shortcut.shortcutId) {
-            @if (shortcut.enabled) {
-              <div>
-                Shortcut ID: {{ shortcut.shortcutId }}
-                Enabled: {{ shortcut.enabled }}
-                Action: {{ shortcut.action }}
-                Key Count: {{ shortcut.keys.length }}
-                Keys: {{ shortcut.keys }}
-                Data Length: {{ shortcut.data.length }}
-                Data: {{ shortcut.data }}
-              </div>
-            }
-          }
-        </mat-card-content>
-      </mat-card>
+      @for (shortcut of kvmSwitchState.keyboardShortcuts.value(); track shortcut.shortcutId) {
+        @if (shortcut.enabled) {
+          <mat-card>
+            <mat-card-content>
+              <app-keyboard-shortcut [shortcut]="shortcut" />
+            </mat-card-content>
+          </mat-card>
+        }
+      }
     }
   </section>
 
@@ -58,7 +45,7 @@
             </mat-card-header>
             <mat-card-content>
               <div>
-              State: {{ computerState.state }}
+                State: {{ computerState.state }}
               </div>
               <div>
                 Hid Protocol Per Interface: {{ computerState.hidProtocolPerInterface }}
