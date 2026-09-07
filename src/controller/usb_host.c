@@ -92,13 +92,17 @@ static void usb_host_process_action() {
                 buffer,
                 sizeof(buffer)
             );
-            if (result == XFER_RESULT_SUCCESS) {
-                kvm_switch_controller_enqueue_hid_device_manufacturer_str(
-                    data->dev_addr,
-                    buffer + 1,
-                    buffer[0] & 0xFF
-                );
+            if (result != XFER_RESULT_SUCCESS) {
+                logf_warning("Failed to get manufacturer string. dev_addr=%u", data->dev_addr);
+                usb_host.should_process_actions = false;
+                return;
             }
+
+            kvm_switch_controller_enqueue_hid_device_manufacturer_str(
+                data->dev_addr,
+                buffer + 1,
+                buffer[0] & 0xFF
+            );
             break;
         }
         case HID_REQUEST_PRODUCT_STRING: {
@@ -110,13 +114,17 @@ static void usb_host_process_action() {
                 buffer,
                 sizeof(buffer)
             );
-            if (result == XFER_RESULT_SUCCESS) {
-                kvm_switch_controller_enqueue_hid_device_product_str(
-                    data->dev_addr,
-                    buffer + 1,
-                    buffer[0] & 0xFF
-                );
+            if (result != XFER_RESULT_SUCCESS) {
+                logf_warning("Failed to get product string. dev_addr %u", data->dev_addr);
+                usb_host.should_process_actions = false;
+                return;
             }
+
+            kvm_switch_controller_enqueue_hid_device_product_str(
+                data->dev_addr,
+                buffer + 1,
+                buffer[0] & 0xFF
+            );
             break;
         }
         default:
@@ -229,6 +237,7 @@ void tuh_mount_cb(
     kvm_switch_controller_enqueue_hid_device_mounted(dev_addr);
     usb_host_enqueue_request_manufacturer_string(dev_addr);
     usb_host_enqueue_request_product_string(dev_addr);
+    usb_host.should_process_actions = true;
 
     logf_info("Device %u is mounted", dev_addr);
 }
