@@ -15,12 +15,13 @@
 </mat-toolbar>
 <div class="content">
 
-  <div class="keyboard-shortcuts">
+  <section class="keyboard-shortcuts">
     @if (kvmSwitchState.keyboardShortcuts.hasValue()) {
+      <h2>Keyboard Shortcuts</h2>
       <mat-card>
         <mat-card-header>
           <mat-card-title>
-            Keyboard Shortcuts
+
           </mat-card-title>
         </mat-card-header>
         <mat-card-content>
@@ -31,9 +32,9 @@
                 Shortcut ID: {{ shortcut.shortcutId }}
                 Enabled: {{ shortcut.enabled }}
                 Action: {{ shortcut.action }}
-                Key Count: {{ shortcut.keyCount }}
+                Key Count: {{ shortcut.keys.length }}
                 Keys: {{ shortcut.keys }}
-                Data Length: {{ shortcut.dataLen }}
+                Data Length: {{ shortcut.data.length }}
                 Data: {{ shortcut.data }}
               </div>
             }
@@ -41,64 +42,54 @@
         </mat-card-content>
       </mat-card>
     }
-  </div>
+  </section>
 
   <div class="side">
 
-    <div class="computer-states">
+    <section class="computer-states">
       @if (kvmSwitchState.computerStates.hasValue()) {
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>
-              Computers
-            </mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-
-            @for (computerState of kvmSwitchState.computerStates.value(); track computerState.computerId) {
+        <h2>Nodes / Computers</h2>
+        @for (computerState of kvmSwitchState.computerStates.value(); track computerState.computerId) {
+          <mat-card>
+            <mat-card-header>
+              <mat-card-title>
+                Node: {{ computerState.computerId }}
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
               <div>
-                Id: {{ computerState.computerId }}
-                State: {{ computerState.state }}
-                State: {{ computerState.hidProtocolPerInterface }}
-
+              State: {{ computerState.state }}
               </div>
-            }
-          </mat-card-content>
-        </mat-card>
+              <div>
+                Hid Protocol Per Interface: {{ computerState.hidProtocolPerInterface }}
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
       }
-    </div>
+    </section>
 
-    <div class="hid-devices">
+    <section class="hid-devices">
       @if (this.kvmSwitchState.hidInterfaces.hasValue()) {
-        <mat-card>
-          <mat-card-header>
-            <mat-card-title>
-              HID Devices
-            </mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            @for (entry of Object.entries(hidDevices()); track entry[0]) {
-              <app-hid-device [device]="entry[1]"></app-hid-device>
-            }
-          </mat-card-content>
-        </mat-card>
+        <h2>HID Devices</h2>
+        @for (entry of Object.entries(hidDevices()); track entry[0]) {
+          <app-hid-device [device]="entry[1]"></app-hid-device>
+        }
       }
-    </div>
+    </section>
   </div>
 
 
-  <div class="logs">
+  <section class="logs">
     @if (kvmSwitchState.logs().length > 0) {
+      <h2>Logs</h2>
       <mat-card>
-        <mat-card-header>
-          <mat-card-title>Logs</mat-card-title>
-        </mat-card-header>
         <mat-card-content>
           <app-kmv-logs [logs]="kvmSwitchState.logs()"></app-kmv-logs>
         </mat-card-content>
       </mat-card>
     }
-  </div>
+  </section>
 
 </div>
 

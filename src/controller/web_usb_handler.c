@@ -65,6 +65,7 @@ bool tud_vendor_control_xfer_cb(
                         }
                         data->computer_id = computer->computer_id;
                         data->state = computer->state;
+                        data->hid_count = CFG_TUH_HID;
                         memcpy(data->hid_protocol_per_interface, computer->hid_protocol_per_interface,
                                CFG_TUD_HID * sizeof(uint8_t));
                         return tud_control_xfer(rhport, request, data, sizeof(*data));
@@ -136,15 +137,19 @@ bool tud_vendor_control_xfer_cb(
                         }
 
                         data->shortcut_id = keyboard_shortcut->shortcut_id;
-                        data->action = keyboard_shortcut->action;
                         data->enabled = keyboard_shortcut->enabled;
-                        data->key_count = keyboard_shortcut->key_count;
-                        memcpy(data->keys, keyboard_shortcut->keys,
-                               keyboard_shortcut->key_count * sizeof(keyboard_shortcut->keys[0]));
-                        data->data_len = keyboard_shortcut->data_len;
-                        memcpy(data->data, keyboard_shortcut->data, keyboard_shortcut->data_len);
+                        data->action = keyboard_shortcut->action;
 
-                        return tud_control_xfer(rhport, request, data, sizeof(*data));
+                        const size_t buffer_size = min16(sizeof(vendor_data_in_buffer), request->wLength);
+                        size_t offset = sizeof(web_usb_cmd_get_keyboard_shortcut_data_t);
+
+                        uint8_t *buffer = vendor_data_in_buffer;
+                        write_value_to_buffer(buffer, buffer_size, &offset, keyboard_shortcut->key_count);
+                        write_to_buffer(buffer, buffer_size, &offset, keyboard_shortcut->keys, keyboard_shortcut->key_count);
+                        write_value_to_buffer(buffer, buffer_size, &offset, keyboard_shortcut->data_len);
+                        write_to_buffer(buffer, buffer_size, &offset, keyboard_shortcut->data, keyboard_shortcut->data_len);
+
+                        return tud_control_xfer(rhport, request, data, offset);
                     }
                     case COMMAND_IN_OP_GET_LOGS: {
                         size_t offset = 0;

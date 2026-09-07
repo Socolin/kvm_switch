@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MatCard, MatCardContent, MatCardHeader, MatCardSubtitle, MatCardTitle } from '@angular/material/card';
+import { MatDivider } from '@angular/material/list';
 import { MatToolbar } from '@angular/material/toolbar';
 import { DeviceInfo, HidDeviceComponent } from './hid-device.component';
 import { KmvLogsComponent } from './kmv-logs.component';
@@ -8,7 +9,7 @@ import { KvmSwitchState } from './kvm-switch-state';
 
 
 @Component({
-  imports: [MatButton, MatCard, MatCardHeader, MatCardContent, MatCardTitle, MatToolbar, MatCardSubtitle, HidDeviceComponent, KmvLogsComponent],
+  imports: [MatButton, MatCard, MatCardHeader, MatCardContent, MatCardTitle, MatToolbar, MatCardSubtitle, HidDeviceComponent, KmvLogsComponent, MatDivider],
   selector: 'app-root',
   styleUrl: './app.component.scss',
   templateUrl: './app.component.html'

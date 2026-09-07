@@ -35,6 +35,7 @@ typedef struct __attribute__((packed)) {
 typedef struct __attribute__((packed)) {
     uint8_t computer_id;
     uint8_t state;
+    uint8_t hid_count;
     uint8_t hid_protocol_per_interface[CFG_TUH_HID];
 } web_usb_cmd_get_computer_state_data_t;
 
@@ -73,10 +74,10 @@ typedef struct __attribute__((packed)) {
     uint8_t shortcut_id;
     bool enabled;
     uint8_t action;
-    uint8_t key_count;
-    uint8_t keys[MAX_KEYS_PER_SHORTCUT];
-    uint8_t data_len;
-    uint8_t data[MAX_DATA_PER_SHORTCUT];
+    // uint8_t key_count;
+    // uint8_t keys[MAX_KEYS_PER_SHORTCUT];
+    // uint8_t data_len;
+    // uint8_t data[MAX_DATA_PER_SHORTCUT];
 } web_usb_cmd_get_keyboard_shortcut_data_t;
 
 typedef struct __attribute__((packed)) {

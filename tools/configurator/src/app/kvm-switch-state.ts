@@ -20,6 +20,7 @@ export class KvmSwitchState {
     this.hidInterfaces.reload();
     this.keyboardShortcuts.reload();
     this.computerStates.reload();
+    this.hidDevicesInfo.reload();
   }
 
   async connectToKvm() {

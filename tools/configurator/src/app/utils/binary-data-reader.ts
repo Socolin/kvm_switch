@@ -23,6 +23,8 @@ export interface BinaryDataReader {
 
   getNextStaticArrayOfUint8(length: number): number[];
 
+  getNextDynamicArrayOfUint8(): number[];
+
   getNextDynamicString(): string;
 
   getNextDynamicUtf16String(): string;
@@ -94,6 +96,9 @@ export class BinaryDataReaderSizeCalculator implements BinaryDataReader {
     throw new Error('Not supported.');
   }
 
+  getNextDynamicArrayOfUint8(): number[] {
+    throw new Error('Not supported.');
+  }
 }
 
 export class BinaryDataReaderImpl implements BinaryDataReader {
@@ -159,6 +164,15 @@ export class BinaryDataReaderImpl implements BinaryDataReader {
   }
 
   getNextStaticArrayOfUint8(length: number): number[] {
+    let result: number[] = [];
+    for (let i = 0; i < length; i++) {
+      result.push(this.data.getUint8(this.offset++));
+    }
+    return result;
+  }
+
+  getNextDynamicArrayOfUint8(): number[] {
+    let length = this.getNextUint8();
     let result: number[] = [];
     for (let i = 0; i < length; i++) {
       result.push(this.data.getUint8(this.offset++));

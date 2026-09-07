@@ -1,10 +1,14 @@
+import { DecimalPipe } from '@angular/common';
 import { Component, input } from '@angular/core';
 import { MatTableModule } from '@angular/material/table';
+import { BigIntPipe } from './big-int-pipe';
 import { KvmLog, KvmLogLevel } from './web-usb-service';
 
 @Component({
   imports: [
     MatTableModule,
+    DecimalPipe,
+    BigIntPipe
   ],
   selector: 'app-kmv-logs',
   styleUrl: './kmv-logs.component.scss',

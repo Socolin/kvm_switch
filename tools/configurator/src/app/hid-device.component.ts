@@ -1,10 +1,12 @@
 import { Component, computed, input } from '@angular/core';
+import { MatCard, MatCardContent, MatCardHeader, MatCardSubtitle, MatCardTitle } from '@angular/material/card';
 import {
   MatAccordion,
   MatExpansionPanel,
   MatExpansionPanelHeader,
   MatExpansionPanelTitle
 } from '@angular/material/expansion';
+import { MatIcon } from '@angular/material/icon';
 import { getUsbVendorById } from 'usb-vendor-ids';
 import { HidState } from './web-usb-service';
 
@@ -22,7 +24,13 @@ export type DeviceInfo = {
     MatAccordion,
     MatExpansionPanel,
     MatExpansionPanelHeader,
-    MatExpansionPanelTitle
+    MatExpansionPanelTitle,
+    MatCard,
+    MatCardContent,
+    MatCardHeader,
+    MatCardTitle,
+    MatCardSubtitle,
+    MatIcon
   ],
   selector: 'app-hid-device',
   styleUrl: './hid-device.component.scss',

@@ -1,39 +1,68 @@
-<h4>Device {{ device().devAddr }}</h4>
-@if (device().manufacturerName) {
-  <div>
-    Manufacturer: {{ device().manufacturerName }}
-  </div>
-}
-@if (device().productName) {
-  <div>
-    Product: {{ device().productName }}
-  </div>
-}
-<div>
-  VID: <code>0x{{ device().vid.toString(16).padStart(4, '0') }}</code> - {{ vendorName() }}
-</div>
-<div>
-  PID: <code>0x{{ device().pid.toString(16).padStart(4, '0') }}</code>
-</div>
-<div>
-  Interfaces:
-  <mat-accordion>
-    @for (hidInterface of device().hidInterfaces; track hidInterface.kvmHidIdx) {
-      <mat-expansion-panel>
-        <mat-expansion-panel-header>
-          <mat-panel-title>HID: Host index: {{ hidInterface.hostHidIdx }} - Kvm Index: {{ hidInterface.kvmHidIdx }}
-          </mat-panel-title>
-        </mat-expansion-panel-header>
-        <div>
-          Has Keyboard Report: {{ hidInterface.hasKeyboardReport }}
-        </div>
-        <div>
-          Use Report Id: {{ hidInterface.useReportId }}
-        </div>
-        <div>
-          Interface Protocol: {{ getItfProtocolName(hidInterface.itfProtocol) }} ({{ hidInterface.itfProtocol }})
-        </div>
-      </mat-expansion-panel>
-    }
-  </mat-accordion>
-</div>
+<mat-card>
+  <mat-card-header>
+    <mat-card-title>
+      Device {{ device().devAddr }}
+    </mat-card-title>
+    <mat-card-subtitle>
+      @if (device().manufacturerName) {
+        {{ device().manufacturerName }}
+      } @else {
+        ???
+      }
+      /
+      @if (device().productName) {
+        {{ device().productName }}
+      } @else {
+        ???
+      }
+    </mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    <div>
+      VID: <code>0x{{ device().vid.toString(16).padStart(4, '0') }}</code> - {{ vendorName() }}
+    </div>
+    <div>
+      PID: <code>0x{{ device().pid.toString(16).padStart(4, '0') }}</code>
+    </div>
+    <div>
+      Interfaces:
+      <mat-accordion>
+        @for (hidInterface of device().hidInterfaces; track hidInterface.kvmHidIdx) {
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                @switch (hidInterface.itfProtocol) {
+                  @case (0) {
+                    <mat-icon>usb</mat-icon>
+                  }
+                  @case (1) {
+                    <mat-icon>keyboard</mat-icon>
+                  }
+                  @case (2) {
+                    <mat-icon>mouse</mat-icon>
+                  }
+                }&nbsp;
+                HID: {{ hidInterface.hostHidIdx }}
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+            <div>
+              Host index: {{hidInterface.hostHidIdx}}
+            </div>
+            <div>
+              Kvm index: {{hidInterface.kvmHidIdx}}
+            </div>
+            <div>
+              Has Keyboard Report: {{ hidInterface.hasKeyboardReport }}
+            </div>
+            <div>
+              Use Report Id: {{ hidInterface.useReportId }}
+            </div>
+            <div>
+              Interface Protocol: {{ getItfProtocolName(hidInterface.itfProtocol) }} ({{ hidInterface.itfProtocol }})
+            </div>
+          </mat-expansion-panel>
+        }
+      </mat-accordion>
+    </div>
+  </mat-card-content>
+</mat-card>

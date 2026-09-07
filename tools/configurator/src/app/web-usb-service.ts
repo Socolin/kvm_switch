@@ -24,10 +24,6 @@ export type KvmLog = {
   message: string,
 };
 
-const HID_ITF_COUNT = 8;
-const MAX_KEYS_PER_SHORTCUT = 6;
-const MAX_DATA_PER_SHORTCUT = 16;
-
 const inCommandOpcode = (opCode: number): number => opCode;
 const outCommandOpcode = (opCode: number): number => opCode | 0x80;
 
@@ -63,11 +59,12 @@ export const kvmUsbOperations = {
   GetComputerState: {
     opCode: inCommandOpcode(0x02),
     isIn: true,
+    dynamicData: true,
     deserializeData: (reader: BinaryDataReader) => {
       return {
         computerId: reader.getNextUint8(),
         state: reader.getNextUint8(),
-        hidProtocolPerInterface: reader.getNextStaticArrayOfUint8(HID_ITF_COUNT)
+        hidProtocolPerInterface: reader.getNextDynamicArrayOfUint8()
       };
     }
   } satisfies InOperation,
@@ -144,15 +141,14 @@ export const kvmUsbOperations = {
   GetKeyboardShortcut: {
     opCode: inCommandOpcode(0x09),
     isIn: true,
+    dynamicData: true,
     deserializeData: (reader: BinaryDataReader) => {
       return {
         shortcutId: reader.getNextUint8(),
         enabled: reader.getNextBool(),
         action: reader.getNextUint8(),
-        keyCount: reader.getNextUint8(),
-        keys: reader.getNextStaticArrayOfUint8(MAX_KEYS_PER_SHORTCUT),
-        dataLen: reader.getNextUint8(),
-        data: reader.getNextStaticArrayOfUint8(MAX_DATA_PER_SHORTCUT)
+        keys: reader.getNextDynamicArrayOfUint8(),
+        data: reader.getNextDynamicArrayOfUint8()
       };
     }
   } satisfies InOperation,
