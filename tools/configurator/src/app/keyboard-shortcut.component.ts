@@ -1,12 +1,21 @@
-import { JsonPipe } from '@angular/common';
-import { Component, model } from '@angular/core';
-import { MatTooltip } from '@angular/material/tooltip';
+import { Component, inject, model } from '@angular/core';
+import { MatIconButton } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
+import { MatIcon } from '@angular/material/icon';
+import {
+  ShortcutEditDialogComponent,
+  ShortcutEditDialogData,
+  ShortcutEditDialogResult
+} from './shortcut-edit-dialog.component';
+import { ShortcutKeyComponent } from './shortcut-key.component';
+import { shortcutActionDefinitions } from './shortcut.model';
 import { ShortcutDefinition } from './web-usb-service';
 
 @Component({
   imports: [
-    JsonPipe,
-    MatTooltip
+    MatIconButton,
+    MatIcon,
+    ShortcutKeyComponent
   ],
   selector: 'app-keyboard-shortcut',
   styleUrl: './keyboard-shortcut.component.scss',
@@ -15,201 +24,24 @@ import { ShortcutDefinition } from './web-usb-service';
 export class KeyboardShortcutComponent {
   shortcut = model.required<ShortcutDefinition>();
 
-  actions: Record<number, { name: string, formatDescription?: (data: number[]) => string }> = {
-    0: { name: 'Active next computer' },
-    1: { name: 'Active previous computer' },
-    2: {
-      name: 'Active specific computer',
-      formatDescription: (data) => {
-        return 'Active computer ' + data[0];
+  protected readonly matDialog = inject(MatDialog);
+
+  actions = shortcutActionDefinitions;
+
+  protected editShortcut() {
+
+    let dialogRef = this.matDialog.open<ShortcutEditDialogComponent, ShortcutEditDialogData, ShortcutEditDialogResult>(
+      ShortcutEditDialogComponent,
+      {
+        data: {
+          shortcut: this.shortcut()
+        }
       }
-    }
-  };
-  // Based on hut1_7.pdf
-  keyCodes: Record<number, { name: string, text: string }> = {
-    0x01: { name: 'KEYBOARD_ERROR_ROLL_OVER', text: 'ERROR_ROLL_OVER' },
-    0x02: { name: 'KEYBOARD_POST_FAIL', text: 'POST_FAIL' },
-    0x03: { name: 'KEYBOARD_ERROR_UNDEFINED', text: 'ERROR_UNDEFINED' },
-
-    0x04: { name: 'KEYBOARD_A', text: 'A' },
-    0x05: { name: 'KEYBOARD_B', text: 'B' },
-    0x06: { name: 'KEYBOARD_C', text: 'C' },
-    0x07: { name: 'KEYBOARD_D', text: 'D' },
-    0x08: { name: 'KEYBOARD_E', text: 'E' },
-    0x09: { name: 'KEYBOARD_F', text: 'F' },
-    0x0A: { name: 'KEYBOARD_G', text: 'G' },
-    0x0B: { name: 'KEYBOARD_H', text: 'H' },
-    0x0C: { name: 'KEYBOARD_I', text: 'I' },
-    0x0D: { name: 'KEYBOARD_J', text: 'J' },
-    0x0E: { name: 'KEYBOARD_K', text: 'K' },
-    0x0F: { name: 'KEYBOARD_L', text: 'L' },
-    0x10: { name: 'KEYBOARD_M', text: 'M' },
-    0x11: { name: 'KEYBOARD_N', text: 'N' },
-    0x12: { name: 'KEYBOARD_O', text: 'O' },
-    0x13: { name: 'KEYBOARD_P', text: 'P' },
-    0x14: { name: 'KEYBOARD_Q', text: 'Q' },
-    0x15: { name: 'KEYBOARD_R', text: 'R' },
-    0x16: { name: 'KEYBOARD_S', text: 'S' },
-    0x17: { name: 'KEYBOARD_T', text: 'T' },
-    0x18: { name: 'KEYBOARD_U', text: 'U' },
-    0x19: { name: 'KEYBOARD_V', text: 'V' },
-    0x1A: { name: 'KEYBOARD_W', text: 'W' },
-    0x1B: { name: 'KEYBOARD_X', text: 'X' },
-    0x1C: { name: 'KEYBOARD_Y', text: 'Y' },
-    0x1D: { name: 'KEYBOARD_Z', text: 'Z' },
-
-    0x1E: { name: 'KEYBOARD_1', text: '1' },
-    0x1F: { name: 'KEYBOARD_2', text: '2' },
-    0x20: { name: 'KEYBOARD_3', text: '3' },
-    0x21: { name: 'KEYBOARD_4', text: '4' },
-    0x22: { name: 'KEYBOARD_5', text: '5' },
-    0x23: { name: 'KEYBOARD_6', text: '6' },
-    0x24: { name: 'KEYBOARD_7', text: '7' },
-    0x25: { name: 'KEYBOARD_8', text: '8' },
-    0x26: { name: 'KEYBOARD_9', text: '9' },
-    0x27: { name: 'KEYBOARD_0', text: '0' },
-
-    0x28: { name: 'KEYBOARD_ENTER', text: 'ENTER' },
-    0x29: { name: 'KEYBOARD_ESCAPE', text: 'ESCAPE' },
-    0x2A: { name: 'KEYBOARD_BACKSPACE', text: 'BACKSPACE' },
-    0x2B: { name: 'KEYBOARD_TAB', text: 'TAB' },
-    0x2C: { name: 'KEYBOARD_SPACE', text: 'SPACE' },
-    0x2D: { name: 'KEYBOARD_MINUS', text: 'MINUS' },
-    0x2E: { name: 'KEYBOARD_EQUAL', text: 'EQUAL' },
-    0x2F: { name: 'KEYBOARD_LEFT_BRACKET', text: 'LEFT_BRACKET' },
-    0x30: { name: 'KEYBOARD_RIGHT_BRACKET', text: 'RIGHT_BRACKET' },
-    0x31: { name: 'KEYBOARD_BACKSLASH', text: 'BACKSLASH' },
-    0x33: { name: 'KEYBOARD_SEMICOLON', text: 'SEMICOLON' },
-    0x34: { name: 'KEYBOARD_APOSTROPHE', text: 'APOSTROPHE' },
-    0x35: { name: 'KEYBOARD_GRAVE', text: 'GRAVE' },
-    0x36: { name: 'KEYBOARD_COMMA', text: 'COMMA' },
-    0x37: { name: 'KEYBOARD_PERIOD', text: 'PERIOD' },
-    0x38: { name: 'KEYBOARD_SLASH', text: 'SLASH' },
-    0x39: { name: 'KEYBOARD_CAPS_LOCK', text: 'CAPS_LOCK' },
-
-    0x3A: { name: 'KEYBOARD_F1', text: 'F1' },
-    0x3B: { name: 'KEYBOARD_F2', text: 'F2' },
-    0x3C: { name: 'KEYBOARD_F3', text: 'F3' },
-    0x3D: { name: 'KEYBOARD_F4', text: 'F4' },
-    0x3E: { name: 'KEYBOARD_F5', text: 'F5' },
-    0x3F: { name: 'KEYBOARD_F6', text: 'F6' },
-    0x40: { name: 'KEYBOARD_F7', text: 'F7' },
-    0x41: { name: 'KEYBOARD_F8', text: 'F8' },
-    0x42: { name: 'KEYBOARD_F9', text: 'F9' },
-    0x43: { name: 'KEYBOARD_F10', text: 'F10' },
-    0x44: { name: 'KEYBOARD_F11', text: 'F11' },
-    0x45: { name: 'KEYBOARD_F12', text: 'F12' },
-
-    0x46: { name: 'KEYBOARD_PRINT_SCREEN', text: 'PRINT_SCREEN' },
-    0x47: { name: 'KEYBOARD_SCROLL_LOCK', text: 'SCROLL_LOCK' },
-    0x48: { name: 'KEYBOARD_PAUSE', text: 'PAUSE' },
-    0x49: { name: 'KEYBOARD_INSERT', text: 'INSERT' },
-    0x4A: { name: 'KEYBOARD_HOME', text: 'HOME' },
-    0x4B: { name: 'KEYBOARD_PAGE_UP', text: 'PAGE_UP' },
-    0x4C: { name: 'KEYBOARD_DELETE', text: 'DELETE' },
-    0x4D: { name: 'KEYBOARD_END', text: 'END' },
-    0x4E: { name: 'KEYBOARD_PAGE_DOWN', text: 'PAGE_DOWN' },
-    0x4F: { name: 'KEYBOARD_RIGHT', text: 'RIGHT' },
-    0x50: { name: 'KEYBOARD_LEFT', text: 'LEFT' },
-    0x51: { name: 'KEYBOARD_DOWN', text: 'DOWN' },
-    0x52: { name: 'KEYBOARD_UP', text: 'UP' },
-
-    0x53: { name: 'KEYPAD_NUM_LOCK', text: 'NUM_LOCK' },
-    0x54: { name: 'KEYPAD_DIVIDE', text: 'DIVIDE' },
-    0x55: { name: 'KEYPAD_MULTIPLY', text: 'MULTIPLY' },
-    0x56: { name: 'KEYPAD_MINUS', text: 'MINUS' },
-    0x57: { name: 'KEYPAD_PLUS', text: 'PLUS' },
-    0x58: { name: 'KEYPAD_ENTER', text: 'ENTER' },
-    0x59: { name: 'KEYPAD_1', text: '1' },
-    0x5A: { name: 'KEYPAD_2', text: '2' },
-    0x5B: { name: 'KEYPAD_3', text: '3' },
-    0x5C: { name: 'KEYPAD_4', text: '4' },
-    0x5D: { name: 'KEYPAD_5', text: '5' },
-    0x5E: { name: 'KEYPAD_6', text: '6' },
-    0x5F: { name: 'KEYPAD_7', text: '7' },
-    0x60: { name: 'KEYPAD_8', text: '8' },
-    0x61: { name: 'KEYPAD_9', text: '9' },
-    0x62: { name: 'KEYPAD_0', text: '0' },
-    0x63: { name: 'KEYPAD_PERIOD', text: 'PERIOD' },
-
-    0x64: { name: 'KEYBOARD_NON_US_BACKSLASH', text: 'NON_US_BACKSLASH' },
-    0x65: { name: 'KEYBOARD_APPLICATION', text: 'APPLICATION' },
-    0x66: { name: 'KEYBOARD_POWER', text: 'POWER' },
-    0x67: { name: 'KEYBOARD_EQUAL_KEYPAD', text: 'EQUAL_KEYPAD' },
-
-    0x68: { name: 'KEYBOARD_F13', text: 'F13' },
-    0x69: { name: 'KEYBOARD_F14', text: 'F14' },
-    0x6A: { name: 'KEYBOARD_F15', text: 'F15' },
-    0x6B: { name: 'KEYBOARD_F16', text: 'F16' },
-    0x6C: { name: 'KEYBOARD_F17', text: 'F17' },
-    0x6D: { name: 'KEYBOARD_F18', text: 'F18' },
-    0x6E: { name: 'KEYBOARD_F19', text: 'F19' },
-    0x6F: { name: 'KEYBOARD_F20', text: 'F20' },
-    0x70: { name: 'KEYBOARD_F21', text: 'F21' },
-    0x71: { name: 'KEYBOARD_F22', text: 'F22' },
-    0x72: { name: 'KEYBOARD_F23', text: 'F23' },
-    0x73: { name: 'KEYBOARD_F24', text: 'F24' },
-
-    0x74: { name: 'KEYBOARD_EXECUTE', text: 'EXECUTE' },
-    0x75: { name: 'KEYBOARD_HELP', text: 'HELP' },
-    0x76: { name: 'KEYBOARD_MENU', text: 'MENU' },
-    0x77: { name: 'KEYBOARD_SELECT', text: 'SELECT' },
-    0x78: { name: 'KEYBOARD_STOP', text: 'STOP' },
-    0x79: { name: 'KEYBOARD_AGAIN', text: 'AGAIN' },
-    0x7A: { name: 'KEYBOARD_UNDO', text: 'UNDO' },
-    0x7B: { name: 'KEYBOARD_CUT', text: 'CUT' },
-    0x7C: { name: 'KEYBOARD_COPY', text: 'COPY' },
-    0x7D: { name: 'KEYBOARD_PASTE', text: 'PASTE' },
-    0x7E: { name: 'KEYBOARD_FIND', text: 'FIND' },
-    0x7F: { name: 'KEYBOARD_MUTE', text: 'MUTE' },
-    0x80: { name: 'KEYBOARD_VOLUME_UP', text: 'VOLUME_UP' },
-    0x81: { name: 'KEYBOARD_VOLUME_DOWN', text: 'VOLUME_DOWN' },
-    0x82: { name: 'KEYBOARD_LOCKING_CAPS_LOCK', text: 'LOCKING_CAPS_LOCK' },
-    0x83: { name: 'KEYBOARD_LOCKING_NUM_LOCK', text: 'LOCKING_NUM_LOCK' },
-    0x84: { name: 'KEYBOARD_LOCKING_SCROLL_LOCK', text: 'LOCKING_SCROLL_LOCK' },
-    0x85: { name: 'KEYPAD_COMMA', text: 'COMMA' },
-    0x86: { name: 'KEYPAD_EQUAL_SIGN', text: 'EQUAL_SIGN' },
-
-    0x87: { name: 'KEYBOARD_INTERNATIONAL1', text: 'INTERNATIONAL1' },
-    0x88: { name: 'KEYBOARD_INTERNATIONAL2', text: 'INTERNATIONAL2' },
-    0x89: { name: 'KEYBOARD_INTERNATIONAL3', text: 'INTERNATIONAL3' },
-    0x8A: { name: 'KEYBOARD_INTERNATIONAL4', text: 'INTERNATIONAL4' },
-    0x8B: { name: 'KEYBOARD_INTERNATIONAL5', text: 'INTERNATIONAL5' },
-    0x8C: { name: 'KEYBOARD_INTERNATIONAL6', text: 'INTERNATIONAL6' },
-    0x8D: { name: 'KEYBOARD_INTERNATIONAL7', text: 'INTERNATIONAL7' },
-    0x8E: { name: 'KEYBOARD_INTERNATIONAL8', text: 'INTERNATIONAL8' },
-    0x8F: { name: 'KEYBOARD_INTERNATIONAL9', text: 'INTERNATIONAL9' },
-
-    0x90: { name: 'KEYBOARD_LANG1', text: 'LANG1' },
-    0x91: { name: 'KEYBOARD_LANG2', text: 'LANG2' },
-    0x92: { name: 'KEYBOARD_LANG3', text: 'LANG3' },
-    0x93: { name: 'KEYBOARD_LANG4', text: 'LANG4' },
-    0x94: { name: 'KEYBOARD_LANG5', text: 'LANG5' },
-    0x95: { name: 'KEYBOARD_LANG6', text: 'LANG6' },
-    0x96: { name: 'KEYBOARD_LANG7', text: 'LANG7' },
-    0x97: { name: 'KEYBOARD_LANG8', text: 'LANG8' },
-    0x98: { name: 'KEYBOARD_LANG9', text: 'LANG9' },
-
-    0x99: { name: 'KEYBOARD_ALTERNATE_ERASE', text: 'ALTERNATE_ERASE' },
-    0x9A: { name: 'KEYBOARD_SYSREQ_ATTENTION', text: 'SYSREQ_ATTENTION' },
-    0x9B: { name: 'KEYBOARD_CANCEL', text: 'CANCEL' },
-    0x9C: { name: 'KEYBOARD_CLEAR', text: 'CLEAR' },
-    0x9D: { name: 'KEYBOARD_PRIOR', text: 'PRIOR' },
-    0x9E: { name: 'KEYBOARD_RETURN', text: 'RETURN' },
-    0x9F: { name: 'KEYBOARD_SEPARATOR', text: 'SEPARATOR' },
-    0xA0: { name: 'KEYBOARD_OUT', text: 'OUT' },
-    0xA1: { name: 'KEYBOARD_OPER', text: 'OPER' },
-    0xA2: { name: 'KEYBOARD_CLEAR_AGAIN', text: 'CLEAR_AGAIN' },
-    0xA3: { name: 'KEYBOARD_CRSEL_PROPS', text: 'CRSEL_PROPS' },
-    0xA4: { name: 'KEYBOARD_EXSEL', text: 'EXSEL' },
-
-    0xE0: { name: 'KEYBOARD_LEFT_CTRL', text: 'LEFT_CTRL' },
-    0xE1: { name: 'KEYBOARD_LEFT_SHIFT', text: 'LEFT_SHIFT' },
-    0xE2: { name: 'KEYBOARD_LEFT_ALT', text: 'LEFT_ALT' },
-    0xE3: { name: 'KEYBOARD_LEFT_GUI', text: 'LEFT_GUI' },
-    0xE4: { name: 'KEYBOARD_RIGHT_CTRL', text: 'RIGHT_CTRL' },
-    0xE5: { name: 'KEYBOARD_RIGHT_SHIFT', text: 'RIGHT_SHIFT' },
-    0xE6: { name: 'KEYBOARD_RIGHT_ALT', text: 'RIGHT_ALT' },
-    0xE7: { name: 'KEYBOARD_RIGHT_GUI', text: 'RIGHT_GUI' }
-  };
+    );
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result) {
+        return;
+      }
+    });
+  }
 }

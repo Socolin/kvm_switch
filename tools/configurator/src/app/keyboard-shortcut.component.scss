@@ -3,6 +3,9 @@
   flex-direction: row;
   gap: 8px;
   align-items: center;
+  .separator {
+    flex: 1;
+  }
 }
 .shortcut-keys {
   display: flex;

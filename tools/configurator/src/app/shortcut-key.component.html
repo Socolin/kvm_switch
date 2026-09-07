@@ -1,0 +1,12 @@
+<div [matTooltip]="keyCodes[keyCode()]?.name">
+  @if (keyCode() == -1) {
+    Press Key To Change It
+  } @else {
+    @let lm = layoutMap();
+    @if (lm) {
+      {{ lm.get(keyCodes[keyCode()].jsKeyCode) || keyCodes[keyCode()].text }}
+    } @else {
+      {{ keyCodes[keyCode()].text }}
+    }
+  }
+</div>

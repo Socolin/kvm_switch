@@ -3,10 +3,15 @@
 <div class="shortcut">
   <div class="shortcut-keys">
     @for (keyCode of shortcut().keys; track $index) {
-      <div class="keyboard-key" [matTooltip]="keyCodes[keyCode].name">
-        {{ keyCodes[keyCode].text }}
-      </div>
+      <app-shortcut-key [keyCode]="keyCode" />
     }
   </div>
   {{ actionDescription ?? action.name }}
+  <span class="separator"></span>
+  <button mat-icon-button (click)="editShortcut()">
+    <mat-icon>edit</mat-icon>
+  </button>
+  <button mat-icon-button>
+    <mat-icon>delete</mat-icon>
+  </button>
 </div>

@@ -1,0 +1,47 @@
+<h2 mat-dialog-title>{{ data.shortcut.shortcutId == -1 ? 'Add' : 'Edit' }} shortcut</h2>
+<mat-dialog-content>
+  <div class="keys">
+    @for (keyCode of keys(); track $index) {
+      <div class="key-code-editor">
+        @if ($index > 0) {
+          <span>+</span>
+        }
+        <app-shortcut-key [keyCode]="editingKeyIdx() === $index ? -1 : keyCode" />
+        <span class="flex-separator"></span>
+        <button mat-icon-button (click)="editKey($index)">
+          <mat-icon>edit</mat-icon>
+        </button>
+        <button mat-icon-button (click)="removeKey($index)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+    }
+
+    <button mat-icon-button (click)="addKey()" [disabled]="editingKeyIdx() != -1">
+      <mat-icon>add</mat-icon>
+    </button>
+  </div>
+
+  <mat-form-field>
+    <mat-label>Action</mat-label>
+    <mat-select [value]="actionId()" (valueChange)="setAction($event)">
+      @for (entry of Object.entries(shortcutActionDefinitions); track $index) {
+        @let actionId = entry[0];
+        @let actionDefinition = entry[1];
+        <mat-option [value]="+actionId">{{ actionDefinition.name }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  @let action = shortcutActionDefinitions[actionId()];
+  @for (dataDescriptor of action.dataDescriptor; track $index) {
+    <mat-form-field>
+      <mat-label>{{dataDescriptor.name}}</mat-label>
+      <input matInput [ngModel]="getData(dataDescriptor)" (ngModelChange)="setData(dataDescriptor, $event)">
+    </mat-form-field>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>CLOSE</button>
+  <button mat-button (click)="save()">SAVE</button>
+</mat-dialog-actions>

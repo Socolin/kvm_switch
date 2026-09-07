@@ -25,6 +25,8 @@ export interface BinaryDataReader {
 
   getNextDynamicArrayOfUint8(): number[];
 
+  getNextDynamicBufferOfUint8(): Uint8Array;
+
   getNextDynamicString(): string;
 
   getNextDynamicUtf16String(): string;
@@ -97,6 +99,10 @@ export class BinaryDataReaderSizeCalculator implements BinaryDataReader {
   }
 
   getNextDynamicArrayOfUint8(): number[] {
+    throw new Error('Not supported.');
+  }
+
+  getNextDynamicBufferOfUint8(): Uint8Array {
     throw new Error('Not supported.');
   }
 }
@@ -196,6 +202,13 @@ export class BinaryDataReaderImpl implements BinaryDataReader {
     for (let i = 0; i < charLen; i++) {
       result += String.fromCharCode(this.getNextUint16());
     }
+    return result;
+  }
+
+  getNextDynamicBufferOfUint8(): Uint8Array {
+    let size = this.getNextUint8();
+    let result = new Uint8Array(this.data.buffer, this.offset, size);
+    this.offset += size;
     return result;
   }
 }

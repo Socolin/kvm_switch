@@ -148,7 +148,7 @@ export const kvmUsbOperations = {
         enabled: reader.getNextBool(),
         action: reader.getNextUint8(),
         keys: reader.getNextDynamicArrayOfUint8(),
-        data: reader.getNextDynamicArrayOfUint8()
+        data: reader.getNextDynamicBufferOfUint8()
       };
     }
   } satisfies InOperation,

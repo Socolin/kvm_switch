@@ -1,0 +1,25 @@
+mat-dialog-content {
+  min-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+mat-form-field {
+  width: 100%;
+}
+.keys {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  .flex-separator {
+    flex: 1;
+  }
+
+  .key-code-editor {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+}
