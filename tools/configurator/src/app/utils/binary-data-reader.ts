@@ -207,7 +207,7 @@ export class BinaryDataReaderImpl implements BinaryDataReader {
 
   getNextDynamicBufferOfUint8(): Uint8Array {
     let size = this.getNextUint8();
-    let result = new Uint8Array(this.data.buffer, this.offset, size);
+    let result = new Uint8Array(this.data.buffer.slice(this.offset, this.offset + size), 0, size);
     this.offset += size;
     return result;
   }

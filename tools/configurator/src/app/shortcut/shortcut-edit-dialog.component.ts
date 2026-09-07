@@ -14,7 +14,7 @@ import { MatInput } from '@angular/material/input';
 import { MatFormField, MatLabel, MatOption, MatSelect } from '@angular/material/select';
 import { ShortcutKeyComponent } from './shortcut-key.component';
 import { keyCodes, ShortcutActionDataDescriptor, shortcutActionDefinitions } from './shortcut.model';
-import { ShortcutDefinition } from './web-usb-service';
+import { ShortcutDefinition } from '../web-usb-service';
 
 export type ShortcutEditDialogData = {
   shortcut: ShortcutDefinition

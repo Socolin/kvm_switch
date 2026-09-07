@@ -13,8 +13,7 @@ import {
 @Service()
 export class KvmSwitchState {
   readonly webUsbService = inject(WebUsbService);
-
-  private logIntervalId = 0;
+  readonly webUsbConnection = signal<WebUsbConnection | undefined>(undefined);
 
   async refresh() {
     this.hidInterfaces.reload();
@@ -23,10 +22,13 @@ export class KvmSwitchState {
     this.hidDevicesInfo.reload();
   }
 
+  private logIntervalId = 0;
+
   async connectToKvm() {
     clearInterval(this.logIntervalId);
     this.logs.set([]);
     this.webUsbConnection.set(undefined);
+
     let connection = await this.webUsbService.connect();
     this.webUsbConnection.set(connection);
     let getLogsResult = await connection.executeInOperation(kvmUsbOperations.GetLogs);
@@ -39,8 +41,6 @@ export class KvmSwitchState {
       }
     }, 250);
   }
-
-  readonly webUsbConnection = signal<WebUsbConnection | undefined>(undefined);
 
   readonly kvmInfo = resource({
     params: () => ({ webUsbConnection: this.webUsbConnection() }),

@@ -17,9 +17,11 @@
       </div>
     }
 
-    <button mat-icon-button (click)="addKey()" [disabled]="editingKeyIdx() != -1">
-      <mat-icon>add</mat-icon>
-    </button>
+    @if (keys().length < 6) {
+      <button mat-icon-button (click)="addKey()" [disabled]="editingKeyIdx() != -1">
+        <mat-icon>add</mat-icon>
+      </button>
+    }
   </div>
 
   <mat-form-field>

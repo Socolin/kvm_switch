@@ -156,22 +156,20 @@ export const kvmUsbOperations = {
     opCode: outCommandOpcode(0x0A),
     isIn: false,
     serializeData: (data: {
-      shortcut_id: number,
+      shortcutId: number,
       enabled: boolean,
       action: number,
-      key_count: number,
       keys: number[],
-      data_len: number,
-      data: number[]
+      data: Uint8Array
     }) => {
       let writer = new BinaryDataWriter();
-      writer.writeUint8(data.shortcut_id);
+      writer.writeUint8(data.shortcutId);
       writer.writeBool(data.enabled);
       writer.writeUint8(data.action);
-      writer.writeUint8(data.key_count);
-      writer.writeStaticArrayOfUint8(data.keys);
-      writer.writeUint8(data.data_len);
-      writer.writeStaticArrayOfUint8(data.data);
+      writer.writeUint8(data.keys.length);
+      writer.writeStaticArrayOfUint8(data.keys, 6);
+      writer.writeUint8(data.data.length);
+      writer.writeStaticBufferOfUint8(data.data, 16);
       return writer.getBuffer(true);
     }
   } satisfies OutOperation,

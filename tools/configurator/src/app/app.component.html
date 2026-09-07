@@ -1,5 +1,5 @@
 <mat-toolbar>
-  <span>KVM Configurator</span>
+  <span>KVM Switch Configurator</span>
   @if (!kvmSwitchState.webUsbConnection()) {
     <button color="primary" mat-button (click)="kvmSwitchState.connectToKvm()">
       Connect to KVM
@@ -14,29 +14,8 @@
   }
 </mat-toolbar>
 <div class="content">
-
   <section class="keyboard-shortcuts">
-    @if (kvmSwitchState.keyboardShortcuts.hasValue()) {
-      <h2>Keyboard Shortcuts</h2>
-
-      @for (shortcut of kvmSwitchState.keyboardShortcuts.value(); track shortcut.shortcutId) {
-        @if (shortcut.enabled) {
-          <mat-card>
-            <mat-card-content>
-              <app-keyboard-shortcut [shortcut]="shortcut" />
-            </mat-card-content>
-          </mat-card>
-        }
-      }
-      <mat-card>
-        <mat-card-actions align="end">
-          <button mat-button (click)="addShortcut()">
-            <mat-icon>add</mat-icon>
-            Add Shortcut
-          </button>
-        </mat-card-actions>
-      </mat-card>
-    }
+    <app-keyboard-shortcuts-panel />
   </section>
 
   <div class="side">

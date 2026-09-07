@@ -1,7 +1,8 @@
-import { Component, inject, model } from '@angular/core';
+import { Component, inject, input, model, output } from '@angular/core';
 import { MatIconButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
+import { ShortcutDefinition } from '../web-usb-service';
 import {
   ShortcutEditDialogComponent,
   ShortcutEditDialogData,
@@ -9,7 +10,6 @@ import {
 } from './shortcut-edit-dialog.component';
 import { ShortcutKeyComponent } from './shortcut-key.component';
 import { shortcutActionDefinitions } from './shortcut.model';
-import { ShortcutDefinition } from './web-usb-service';
 
 @Component({
   imports: [
@@ -22,14 +22,13 @@ import { ShortcutDefinition } from './web-usb-service';
   templateUrl: './keyboard-shortcut.component.html'
 })
 export class KeyboardShortcutComponent {
-  shortcut = model.required<ShortcutDefinition>();
-
   protected readonly matDialog = inject(MatDialog);
+  readonly actions = shortcutActionDefinitions;
+  readonly shortcut = input.required<ShortcutDefinition>();
+  readonly editShortcut = output<ShortcutDefinition>();
+  readonly deleteShortcut = output<ShortcutDefinition>();
 
-  actions = shortcutActionDefinitions;
-
-  protected editShortcut() {
-
+  protected openEditShortcut() {
     let dialogRef = this.matDialog.open<ShortcutEditDialogComponent, ShortcutEditDialogData, ShortcutEditDialogResult>(
       ShortcutEditDialogComponent,
       {
@@ -38,10 +37,11 @@ export class KeyboardShortcutComponent {
         }
       }
     );
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe(async (result) => {
       if (!result) {
         return;
       }
+      this.editShortcut.emit(result.shortcut);
     });
   }
 }

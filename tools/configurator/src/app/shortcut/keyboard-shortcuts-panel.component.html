@@ -1,0 +1,21 @@
+@if (kvmSwitchState.keyboardShortcuts.hasValue()) {
+  <h2>Keyboard Shortcuts</h2>
+
+  @for (shortcut of kvmSwitchState.keyboardShortcuts.value(); track shortcut.shortcutId) {
+    @if (shortcut.enabled) {
+      <mat-card>
+        <mat-card-content>
+          <app-keyboard-shortcut [shortcut]="shortcut" (editShortcut)="editShortcut($event)" (deleteShortcut)="deleteShortcut($event)"/>
+        </mat-card-content>
+      </mat-card>
+    }
+  }
+  <mat-card>
+    <mat-card-actions align="end">
+      <button mat-button (click)="addShortcut()">
+        <mat-icon>add</mat-icon>
+        Add Shortcut
+      </button>
+    </mat-card-actions>
+  </mat-card>
+}

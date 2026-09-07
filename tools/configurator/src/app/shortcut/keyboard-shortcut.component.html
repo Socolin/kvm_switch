@@ -8,10 +8,10 @@
   </div>
   {{ actionDescription ?? action.name }}
   <span class="separator"></span>
-  <button mat-icon-button (click)="editShortcut()">
+  <button mat-icon-button (click)="openEditShortcut()">
     <mat-icon>edit</mat-icon>
   </button>
-  <button mat-icon-button>
+  <button mat-icon-button (click)="deleteShortcut.emit(shortcut())">
     <mat-icon>delete</mat-icon>
   </button>
 </div>

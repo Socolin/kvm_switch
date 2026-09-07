@@ -40,9 +40,16 @@ export class BinaryDataWriter {
     this.offset += 4;
   }
 
-  public writeStaticArrayOfUint8(array: number[]): void {
-    for (let value of array) {
-      this.values.push({ size: 1, unsigned: true, value });
+  public writeStaticArrayOfUint8(array: number[], static_size?: number): void {
+    for (let i = 0; i < (static_size ?? array.length); i++) {
+      this.values.push({ size: 1, unsigned: true, value: i < array.length ? array[i] : 0 });
+      this.offset += 1;
+    }
+  }
+
+  public writeStaticBufferOfUint8(array: Uint8Array, static_size: number): void {
+    for (let i = 0; i < static_size; i++) {
+      this.values.push({ size: 1, unsigned: true, value: i < array.length ? array[i] : 0 });
       this.offset += 1;
     }
   }
