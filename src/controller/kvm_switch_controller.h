@@ -12,49 +12,23 @@ void kvm_switch_controller_init();
 
 void kvm_switch_controller_task();
 
-/**
- * @param computer_id The computer id, 0 is the one on the main board
- * @param kvm_hid_idx The index of the HID interface in the KVM (Exposed to the computers)
- * @param hid_protocol The HID protocol (boot / report) \see hid_protocol_mode_enum_t
- */
-void kvm_switch_controller_computer_set_hid_protocol(
-    uint8_t computer_id,
-    uint8_t kvm_hid_idx,
-    uint8_t hid_protocol
-);
-
-/**
- * @param computer_id The computer id, 0 is the one on the main board
- * @param kvm_hid_idx The index of the HID interface in the KVM (Exposed to the computers)
- * @param report_id The report id of the report
- * @param report_type \see hid_report_type_t
- * @param report_data The data of the report
- * @param report_data_len The length of the report data
- */
-void kvm_switch_controller_computer_set_report(
-    uint8_t computer_id,
-    uint8_t kvm_hid_idx,
-    uint8_t report_id,
-    uint8_t report_type,
-    uint8_t const *report_data,
-    uint16_t report_data_len
-);
-
 // ╔══════════════════════════════════╗
 // ║         KVM switch Action        ║
 // ╚══════════════════════════════════╝
 
 typedef enum {
-    KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_MOUNTED,
-    KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_UNMOUNTED,
-    KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_MANUFACTURER_STR,
-    KVM_SWITCH_CONTROLLER_OP_HID_DEVICE_PRODUCT_STR,
-    KVM_SWITCH_CONTROLLER_OP_HID_MOUNT,
-    KVM_SWITCH_CONTROLLER_OP_HID_UMOUNT,
-    KVM_SWITCH_CONTROLLER_OP_HID_REPORT,
-    KVM_SWITCH_CONTROLLER_OP_COMPUTER_READY,
-    KVM_SWITCH_CONTROLLER_OP_USB_DEVICE_MOUNTED,
-    KVM_SWITCH_CONTROLLER_OP_USB_DEVICE_UNMOUNTED,
+    KSC_OP_HID_DEVICE_MOUNTED,
+    KSC_OP_HID_DEVICE_UNMOUNTED,
+    KSC_OP_HID_DEVICE_MANUFACTURER_STR,
+    KSC_OP_HID_DEVICE_PRODUCT_STR,
+    KSC_OP_HID_MOUNT,
+    KSC_OP_HID_UMOUNT,
+    KSC_OP_HID_REPORT,
+    KSC_OP_COMPUTER_READY,
+    KSC_OP_COMPUTER_SET_HID_PROTOCOL,
+    KSC_OP_COMPUTER_SET_REPORT,
+    KSC_OP_USB_DEVICE_MOUNTED,
+    KSC_OP_USB_DEVICE_UNMOUNTED,
 } kvm_switch_node_action_opcode_t;
 
 typedef struct {
@@ -105,7 +79,7 @@ typedef struct __attribute__((packed)) {
     const uint8_t hid_protocol; /**< HID protocol (boot / report) \see hid_protocol_mode_enum_t */
     const uint8_t report_id; /**< The report ID if any. 0 = no report id */
     const uint16_t report_data_len; /**< The length of the report data */
-    uint8_t report_data[128]; /**< The report data */
+    uint8_t report_data[256]; /**< The report data */
 } ksc_action_hid_report_data_t;
 
 typedef struct {
@@ -113,6 +87,21 @@ typedef struct {
     const uint16_t vid;
     const uint16_t pid;
 } ksc_action_computer_rdy_data_t;
+
+typedef struct {
+    const uint8_t computer_id;
+    const uint8_t kvm_hid_idx;
+    const uint8_t hid_protocol;
+} ksc_action_computer_set_hid_protocol_t;
+
+typedef struct {
+    const uint8_t computer_id;
+    const uint8_t kvm_hid_idx;
+    const uint8_t report_id;
+    const uint8_t report_type;
+    const uint16_t report_data_len;
+    uint8_t report_data[256];
+} ksc_action_computer_set_report_t;
 
 typedef struct {
 } ksc_action_usb_device_mounted_data_t;
@@ -208,6 +197,34 @@ bool kvm_switch_controller_enqueue_report(
 
 bool kvm_switch_controller_enqueue_computer_ready(
     uint8_t computer_id
+);
+
+/**
+ * @param computer_id The computer id, 0 is the one on the main board
+ * @param kvm_hid_idx The index of the HID interface in the KVM (Exposed to the computers)
+ * @param hid_protocol The HID protocol (boot / report) \see hid_protocol_mode_enum_t
+ */
+bool kvm_switch_controller_enqueue_computer_set_hid_protocol(
+    uint8_t computer_id,
+    uint8_t kvm_hid_idx,
+    uint8_t hid_protocol
+);
+
+/**
+ * @param computer_id The computer id, 0 is the one on the main board
+ * @param kvm_hid_idx The index of the HID interface in the KVM (Exposed to the computers)
+ * @param report_id The report id of the report
+ * @param report_type \see hid_report_type_t
+ * @param report_data The data of the report
+ * @param report_data_len The length of the report data
+ */
+bool kvm_switch_controller_enqueue_computer_set_report(
+    uint8_t computer_id,
+    uint8_t kvm_hid_idx,
+    uint8_t report_id,
+    uint8_t report_type,
+    uint8_t const *report_data,
+    uint16_t report_data_len
 );
 
 bool kvm_switch_controller_enqueue_usb_device_mounted();

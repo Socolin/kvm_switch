@@ -102,7 +102,7 @@ static void node_link_ctrl_process_received_message(
         }
         case NL_NODE_MESSAGE_OP_SET_REPORT: {
             auto const message_data = (nl_node_msg_hid_set_report_data_t *) message->data;
-            kvm_switch_controller_computer_set_report(
+            kvm_switch_controller_enqueue_computer_set_report(
                 computer_id,
                 message_data->kvm_hid_idx,
                 message_data->report_id,
@@ -114,7 +114,7 @@ static void node_link_ctrl_process_received_message(
         }
         case NL_NODE_MESSAGE_OP_SET_HID_PROTOCOL: {
             auto const message_data = (nl_node_msg_hid_set_hid_protocol_data_t *) message->data;
-            kvm_switch_controller_computer_set_hid_protocol(
+            kvm_switch_controller_enqueue_computer_set_hid_protocol(
                 computer_id,
                 message_data->kvm_hid_idx,
                 message_data->hid_protocol

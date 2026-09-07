@@ -135,7 +135,7 @@ static void on_usb_device_set_report(
     uint8_t const *report_data,
     const uint16_t report_data_len
 ) {
-    kvm_switch_controller_computer_set_report(
+    kvm_switch_controller_enqueue_computer_set_report(
         LOCAL_COMPUTER_ID,
         kvm_hid_idx,
         report_id,
@@ -149,7 +149,7 @@ static void on_usb_device_set_hid_protocol(
     const uint8_t kvm_hid_idx,
     const uint8_t hid_protocol
 ) {
-    kvm_switch_controller_computer_set_hid_protocol(
+    kvm_switch_controller_enqueue_computer_set_hid_protocol(
         LOCAL_COMPUTER_ID,
         kvm_hid_idx,
         hid_protocol
