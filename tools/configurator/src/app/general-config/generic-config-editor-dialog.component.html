@@ -1,0 +1,19 @@
+<h2 mat-dialog-title>Edit General Config</h2>
+<mat-dialog-content>
+  <p>Those changes will be effective after a reboot. Changing the Vendor ID will break this UI (It will not be able to find the device).</p>
+  <p>Changing the PID can help fix issue with HID Descriptor caching on Windows.</p>
+  <mat-form-field>
+    <mat-label>Vendor ID</mat-label>
+    <input matInput [(ngModel)]="vid">
+    <mat-hint>Decimal value (base 10)</mat-hint>
+  </mat-form-field>
+  <mat-form-field>
+    <mat-label>Product ID</mat-label>
+    <input matInput [(ngModel)]="pid">
+    <mat-hint>Decimal value (base 10)</mat-hint>
+  </mat-form-field>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>CLOSE</button>
+  <button mat-button (click)="save()">SAVE</button>
+</mat-dialog-actions>

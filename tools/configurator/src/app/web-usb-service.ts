@@ -6,6 +6,7 @@ export type HidState = ReturnType<typeof kvmUsbOperations.GetHidState.deserializ
 export type HidDeviceInfo = ReturnType<typeof kvmUsbOperations.GetHidDevice.deserializeData>;
 export type ShortcutDefinition = ReturnType<typeof kvmUsbOperations.GetKeyboardShortcut.deserializeData>;
 export type ComputerState = ReturnType<typeof kvmUsbOperations.GetComputerState.deserializeData>;
+export type GeneralConfig = ReturnType<typeof kvmUsbOperations.GetGeneralConfig.deserializeData>;
 
 export enum KvmLogLevel {
   Debug,
@@ -121,7 +122,7 @@ export const kvmUsbOperations = {
   SetGeneralConfig: {
     opCode: outCommandOpcode(0x07),
     isIn: false,
-    serializeData: (data: { use_custom_vid: boolean, vid: number, use_custom_pid: boolean, pid: number }) => {
+    serializeData: (data: { vid: number, pid: number }) => {
       let writer = new BinaryDataWriter();
       writer.writeInt16(data.vid);
       writer.writeInt16(data.pid);
