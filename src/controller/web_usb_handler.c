@@ -209,6 +209,7 @@ bool tud_vendor_control_xfer_cb(
                         general_config_t *config = kvm_config_get_general();
                         config->vid = data->vid;
                         config->pid = data->pid;
+                        kvm_config_save();
                         return tud_control_xfer(rhport, request, nullptr, 0);
                     }
                     case COMMAND_OUT_OP_SET_SHORTCUT: {
@@ -222,6 +223,7 @@ bool tud_vendor_control_xfer_cb(
                             data->data_len,
                             data->data
                         );
+                        kvm_config_save();
                         return tud_control_xfer(rhport, request, nullptr, 0);
                     }
                     default: {

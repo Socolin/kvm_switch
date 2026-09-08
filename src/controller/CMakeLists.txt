@@ -13,6 +13,7 @@ add_executable(kvm_controller
         usb_host.c
         web_usb_handler.c
         ../shared_usb/usb_device.c
+        config_persistence.c
 )
 target_link_options(kvm_controller PUBLIC -Wl,--print-memory-usage)
 
@@ -30,6 +31,7 @@ target_link_libraries(kvm_controller
         pico_stdlib
         pico_multicore
         hardware_spi
+        hardware_flash
         pico_pio_usb
         tinyusb_device
         tinyusb_host

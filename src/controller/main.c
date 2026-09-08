@@ -1,4 +1,5 @@
 #include "hid_device_manager.h"
+#include "pico/flash.h"
 #if !PICO_RP2350
 #error "This targets the Pico 2 (RP2350) only"
 #endif
@@ -54,6 +55,7 @@ static void on_usb_device_unmounted();
 static void core1_main() {
     log_info("Starting USB Host on core 1");
 
+    flash_safe_execute_core_init();
     usb_host_init();
 
     log_info("USB Host ready");

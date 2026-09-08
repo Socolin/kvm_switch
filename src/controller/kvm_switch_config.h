@@ -29,6 +29,8 @@ typedef struct {
 
 void kvm_config_init();
 
+void kvm_config_save();
+
 general_config_t *kvm_config_get_general(
 );
 

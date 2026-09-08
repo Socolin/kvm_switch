@@ -20,7 +20,7 @@ typedef struct __attribute__((packed)) {
 
 typedef struct {
     ring_buffer_t ring_buffer;
-    uint8_t log_buffer[4096];
+    uint8_t log_buffer[8192];
     uint8_t min_log_level;
     uint8_t immediate_log_min_log_level;
     size_t dropped_logs;

@@ -3,38 +3,66 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "config_persistence.h"
 #include "logger.h"
 
 #include "key_codes.h"
 
 // https://pid.codes/pids/
 // FIXME: Request PID when needed.
-#define USB_VID   0x1209
-#define USB_PID   0x50C0
+#define DEFAULT_USB_VID   0x1209
+#define DEFAULT_USB_PID   0x50C0
+
+#define SAVED_CONFIG_MAGIC 0x123456789ABCDEF0
+#define CONFIG_VERSION 1 // Can be used in the future to handle config migration
 
 typedef struct {
+    uint64_t saved_config_magic;
+    uint8_t version;
     keyboard_shortcut_t keyboard_shortcut[MAX_KEYBOARD_SHORTCUT];
     general_config_t general_config;
 } kvm_config_t;
 
 static kvm_config_t kvm_config = {};
 
-void kvm_config_init() {
+static void kvm_config_init_from_default() {
     memset(&kvm_config, 0, sizeof(kvm_config_t));
+
+    kvm_config.saved_config_magic = SAVED_CONFIG_MAGIC;
+    kvm_config.version = CONFIG_VERSION;
+
+    kvm_config.general_config.vid = DEFAULT_USB_VID;
+    kvm_config.general_config.pid = DEFAULT_USB_PID;
+
     for (int i = 0; i < MAX_KEYBOARD_SHORTCUT; i++) {
         kvm_config.keyboard_shortcut[i].shortcut_id = i;
         kvm_config.keyboard_shortcut[i].enabled = false;
     }
-
-    kvm_config.general_config.vid = USB_VID;
-    kvm_config.general_config.pid = USB_PID;
-
     constexpr uint8_t shortcut_1_keys[] = {HID_KEYBOARD_USAGE_SCROLL_LOCK, HID_KEYBOARD_USAGE_1};
     constexpr uint8_t shortcut_1_data[] = {0};
     kvm_config_set_shortcut(0, true, CHANGE_ACTIVE_COMPUTER_SET, 2, shortcut_1_keys, 1, shortcut_1_data);
     constexpr uint8_t shortcut_2_keys[] = {HID_KEYBOARD_USAGE_SCROLL_LOCK, HID_KEYBOARD_USAGE_2};
     constexpr uint8_t shortcut_2_data[] = {1};
     kvm_config_set_shortcut(1, true, CHANGE_ACTIVE_COMPUTER_SET, 2, shortcut_2_keys, 1, shortcut_2_data);
+}
+
+void kvm_config_init() {
+    config_persistence_read(&kvm_config, sizeof(kvm_config_t));
+    if (kvm_config.saved_config_magic != SAVED_CONFIG_MAGIC) {
+        logf_info("No configuration found, using default values");
+        kvm_config_init_from_default();
+    } else {
+        log_info("Configuration found, using saved values");
+        if (kvm_config.version != CONFIG_VERSION) {
+            // In the future we can have some migration logic here
+            logf_warning("Invalid configuration version: %d, using default values", kvm_config.version);
+            kvm_config_init_from_default();
+        }
+    }
+}
+
+void kvm_config_save() {
+    config_persistence_save(&kvm_config, sizeof(kvm_config_t));
 }
 
 general_config_t *kvm_config_get_general() {

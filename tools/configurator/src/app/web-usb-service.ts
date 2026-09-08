@@ -208,8 +208,6 @@ export class WebUsbService {
 
   async connect() {
     let device = await navigator.usb.requestDevice({ filters: [{ vendorId: this.vendorId }] });
-    console.log(device.productName);
-    console.log(device.manufacturerName);
     await device.open();
     if (!device.configuration) {
       await device.selectConfiguration(1);
