@@ -1,6 +1,6 @@
 <mat-toolbar>
   <span>KVM Switch Configurator</span>
-  @if (!kvmSwitchState.webUsbConnection()) {
+  @if (!kvmSwitchState.isConnected()) {
     <button color="primary" mat-button (click)="kvmSwitchState.connectToKvm()">
       Connect to KVM
     </button>
@@ -19,50 +19,20 @@
   </section>
 
   <div class="side">
-
+    <section class="general-config">
+      <app-general-config-panel />
+    </section>
     <section class="computer-states">
-      @if (kvmSwitchState.computerStates.hasValue()) {
-        <h2>Nodes / Computers</h2>
-        @for (computerState of kvmSwitchState.computerStates.value(); track computerState.computerId) {
-          <mat-card>
-            <mat-card-header>
-              <mat-card-title>
-                Node: {{ computerState.computerId }}
-              </mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <div>
-                State: {{ computerState.state }}
-              </div>
-              <div>
-                Hid Protocol Per Interface: {{ computerState.hidProtocolPerInterface }}
-              </div>
-            </mat-card-content>
-          </mat-card>
-        }
-      }
+      <app-nodes-panel />
     </section>
 
     <section class="hid-devices">
-      @if (this.kvmSwitchState.hidInterfaces.hasValue()) {
-        <h2>HID Devices</h2>
-        @for (entry of Object.entries(hidDevices()); track entry[0]) {
-          <app-hid-device [device]="entry[1]"></app-hid-device>
-        }
-      }
+      <app-hid-devices-panel />
     </section>
   </div>
 
-
   <section class="logs">
-    @if (kvmSwitchState.logs().length > 0) {
-      <h2>Logs</h2>
-      <mat-card>
-        <mat-card-content>
-          <app-kmv-logs [logs]="kvmSwitchState.logs()"></app-kmv-logs>
-        </mat-card-content>
-      </mat-card>
-    }
+    <app-kvm-logs-panel />
   </section>
 
 </div>

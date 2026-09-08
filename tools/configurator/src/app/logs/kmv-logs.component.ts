@@ -1,8 +1,8 @@
 import { Component, input } from '@angular/core';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltip } from '@angular/material/tooltip';
-import { BigIntPipe } from './big-int-pipe';
-import { KvmLog, KvmLogLevel } from './web-usb-service';
+import { BigIntPipe } from '../utils/big-int-pipe';
+import { KvmLog, KvmLogLevel } from '../web-usb-service';
 
 @Component({
   imports: [

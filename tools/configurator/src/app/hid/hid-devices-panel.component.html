@@ -1,0 +1,6 @@
+@if (this.kvmSwitchState.hidInterfaces.hasValue()) {
+  <h2>HID Devices</h2>
+  @for (entry of Object.entries(hidDevices()); track entry[0]) {
+    <app-hid-device [device]="entry[1]"></app-hid-device>
+  }
+}

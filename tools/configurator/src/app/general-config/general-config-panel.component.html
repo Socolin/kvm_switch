@@ -1,0 +1,19 @@
+@if (kvmSwitchState.generalConfig.hasValue()) {
+  @let generalConfig = kvmSwitchState.generalConfig.value();
+  <h2>General Config</h2>
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>
+        KVM Config
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div>
+        Vid: <code>0x{{ generalConfig.vid.toString(16).padStart(4, '0') }}</code>
+      </div>
+      <div>
+        Pid: <code>0x{{ generalConfig.pid.toString(16).padStart(4, '0') }}</code>
+      </div>
+    </mat-card-content>
+  </mat-card>
+}

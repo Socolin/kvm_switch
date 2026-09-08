@@ -8,7 +8,7 @@ import {
 } from '@angular/material/expansion';
 import { MatIcon } from '@angular/material/icon';
 import { getUsbVendorById } from 'usb-vendor-ids';
-import { HidState } from './web-usb-service';
+import { HidState } from '../web-usb-service';
 
 export type DeviceInfo = {
   devAddr: number,

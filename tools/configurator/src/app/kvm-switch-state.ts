@@ -1,4 +1,4 @@
-import { inject, resource, Service, signal } from '@angular/core';
+import { computed, effect, inject, resource, Service, signal } from '@angular/core';
 import {
   ComputerState,
   HidDeviceInfo,
@@ -14,6 +14,17 @@ import {
 export class KvmSwitchState {
   readonly webUsbService = inject(WebUsbService);
   readonly webUsbConnection = signal<WebUsbConnection | undefined>(undefined);
+  readonly isConnected = computed(() => this.webUsbConnection()?.isConnected());
+
+  constructor() {
+    effect(() => {
+      if (!this.isConnected()) {
+        clearInterval(this.logIntervalId);
+        this.logIntervalId = 0;
+        this.logs.set([]);
+      }
+    });
+  }
 
   async refresh() {
     this.hidInterfaces.reload();
@@ -47,15 +58,24 @@ export class KvmSwitchState {
     loader: async ({ params }) => await params.webUsbConnection?.executeInOperation(kvmUsbOperations.GetInfo)
   });
 
+  readonly generalConfig = resource({
+    params: () => ({ webUsbConnection: this.webUsbConnection() }),
+    loader: async ({ params }) => await params.webUsbConnection?.executeInOperation(kvmUsbOperations.GetGeneralConfig)
+  });
+
   readonly hidInterfaces = resource({
     params: () => ({
       webUsbConnection: this.webUsbConnection(),
-      kvmInfo: this.kvmInfo.value()
+      kvmInfo: this.kvmInfo.value(),
+      isConnected: this.isConnected()
     }),
     loader: async ({ params }) => {
       let result = { hidInterfaces: [] as HidState[] };
       if (!params.kvmInfo)
         return undefined;
+      if (!params.isConnected) {
+        return undefined;
+      }
 
       for (let i = 0; i < params.kvmInfo.hidInterfaceCount; i++) {
         let hidState = await params.webUsbConnection?.executeInOperation(kvmUsbOperations.GetHidState, i);
@@ -70,12 +90,16 @@ export class KvmSwitchState {
   readonly hidDevicesInfo = resource({
     params: () => ({
       webUsbConnection: this.webUsbConnection(),
-      kvmInfo: this.kvmInfo.value()
+      kvmInfo: this.kvmInfo.value(),
+      isConnected: this.isConnected()
     }),
     loader: async ({ params }) => {
       let result: Record<number, HidDeviceInfo> = {};
       if (!params.kvmInfo)
         return undefined;
+      if (!params.isConnected) {
+        return undefined;
+      }
 
       for (let devAddr = 1; devAddr <= params.kvmInfo.hidDeviceCount; devAddr++) {
         let hidDeviceInfo = await params.webUsbConnection?.executeInOperation(kvmUsbOperations.GetHidDevice, devAddr);
@@ -89,11 +113,15 @@ export class KvmSwitchState {
 
   readonly keyboardShortcuts = resource({
     params: () => ({
-      webUsbConnection: this.webUsbConnection()
+      webUsbConnection: this.webUsbConnection(),
+      isConnected: this.isConnected()
     }),
     loader: async ({ params }) => {
       let result: ShortcutDefinition[] = [];
       if (!params.webUsbConnection) {
+        return undefined;
+      }
+      if (!params.isConnected) {
         return undefined;
       }
 
@@ -110,12 +138,16 @@ export class KvmSwitchState {
   readonly computerStates = resource({
     params: () => ({
       webUsbConnection: this.webUsbConnection(),
-      kvmInfo: this.kvmInfo.value()
+      kvmInfo: this.kvmInfo.value(),
+      isConnected: this.isConnected()
     }),
     loader: async ({ params }) => {
       if (!params.kvmInfo)
         return undefined;
       if (!params.webUsbConnection) {
+        return undefined;
+      }
+      if (!params.isConnected) {
         return undefined;
       }
 

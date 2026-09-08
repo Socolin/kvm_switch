@@ -1,9 +1,7 @@
-import { Service } from '@angular/core';
+import { Service, signal } from '@angular/core';
 import { BinaryDataReader, BinaryDataReaderImpl, BinaryDataReaderSizeCalculator } from './utils/binary-data-reader';
 import { BinaryDataWriter } from './utils/binary-data-writer';
 
-
-export type KvmInfo = ReturnType<typeof kvmUsbOperations.GetInfo.deserializeData>;
 export type HidState = ReturnType<typeof kvmUsbOperations.GetHidState.deserializeData>;
 export type HidDeviceInfo = ReturnType<typeof kvmUsbOperations.GetHidDevice.deserializeData>;
 export type ShortcutDefinition = ReturnType<typeof kvmUsbOperations.GetKeyboardShortcut.deserializeData>;
@@ -16,6 +14,7 @@ export enum KvmLogLevel {
   Error,
   Critical,
 }
+
 export type KvmLog = {
   timestamp: bigint
   logLevel: KvmLogLevel,
@@ -52,7 +51,7 @@ export const kvmUsbOperations = {
         protocolVersion: reader.getNextUint16(),
         computerCount: reader.getNextUint8(),
         hidInterfaceCount: reader.getNextUint8(),
-        hidDeviceCount: reader.getNextUint8(),
+        hidDeviceCount: reader.getNextUint8()
       };
     }
   } satisfies InOperation,
@@ -77,7 +76,7 @@ export const kvmUsbOperations = {
         devAddr: reader.getNextUint8(),
         isMounted: reader.getNextBool(),
         manufacturerName: reader.getNextDynamicUtf16String(),
-        productName: reader.getNextDynamicUtf16String(),
+        productName: reader.getNextDynamicUtf16String()
       };
     }
 
@@ -217,15 +216,29 @@ export class WebUsbService {
       throw new Error('No interface found with class 255');
     }
     await device.claimInterface(interface_index);
-    return new WebUsbConnection(device, interface_index);
+
+    let webUsbConnection = new WebUsbConnection(device, interface_index);
+    navigator.usb.addEventListener('disconnect', (event) => {
+      if (event.device === device) {
+        webUsbConnection.markDeviceAsDisconnected();
+      }
+    });
+
+    return webUsbConnection;
   }
 }
 
 export class WebUsbConnection {
+  readonly isConnected = signal(true);
+
   constructor(
     public readonly device: USBDevice,
     public readonly interface_index: number
   ) {
+  }
+
+  markDeviceAsDisconnected() {
+    this.isConnected.set(false);
   }
 
   async executeInOperation<TOperation extends InOperation>(

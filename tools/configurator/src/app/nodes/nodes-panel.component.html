@@ -1,0 +1,20 @@
+@if (kvmSwitchState.computerStates.hasValue()) {
+  <h2>Nodes / Computers</h2>
+  @for (computerState of kvmSwitchState.computerStates.value(); track computerState.computerId) {
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>
+          Node: {{ computerState.computerId }}
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div>
+          State: {{ computerState.state }}
+        </div>
+        <div>
+          Hid Protocol Per Interface: {{ computerState.hidProtocolPerInterface }}
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+}
