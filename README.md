@@ -15,7 +15,6 @@ The remaining tasks are:
 - Test with 2 nodes (switch between 3 computers).
 - Design PCB for 1 node (and maybe for 2 nodes later)
 - Write documentation
-- Add a way to configure the switch (I need to explore WebUSB)
 - Be able to switch only the keyboard or the mouse
 - Test `TUD_OPT_HIGH_SPEED`
 
