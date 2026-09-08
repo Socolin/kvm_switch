@@ -1,5 +1,7 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
+import { MatButton } from '@angular/material/button';
 import { MatCard, MatCardContent, MatCardHeader, MatCardSubtitle, MatCardTitle } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
 import {
   MatAccordion,
   MatExpansionPanel,
@@ -8,7 +10,12 @@ import {
 } from '@angular/material/expansion';
 import { MatIcon } from '@angular/material/icon';
 import { getUsbVendorById } from 'usb-vendor-ids';
-import { HidState } from '../web-usb-service';
+import { KvmSwitchState } from '../kvm-switch-state';
+import { HidState, kvmUsbOperations } from '../web-usb-service';
+import {
+  HidDescriptorInspectorDialogComponent,
+  HidDescriptorInspectorDialogData
+} from './hid-descriptor-inspector-dialog.component';
 
 export type DeviceInfo = {
   devAddr: number,
@@ -30,13 +37,17 @@ export type DeviceInfo = {
     MatCardHeader,
     MatCardTitle,
     MatCardSubtitle,
-    MatIcon
+    MatIcon,
+    MatButton
   ],
   selector: 'app-hid-device',
   styleUrl: './hid-device.component.scss',
   templateUrl: './hid-device.component.html'
 })
 export class HidDeviceComponent {
+  protected readonly kvmSwitchState = inject(KvmSwitchState);
+  protected readonly matDialog = inject(MatDialog);
+
   device = input.required<DeviceInfo>();
   vendorName = computed(() => {
     return getUsbVendorById(this.device().vid);
@@ -53,5 +64,19 @@ export class HidDeviceComponent {
       default:
         return 'Unknown';
     }
+  }
+
+  protected async openHidInspector(kvmHidIdx: number) {
+    let webUsbConnection = this.kvmSwitchState.webUsbConnection();
+    if (!webUsbConnection) {
+      return;
+    }
+
+    let hidDescriptorResult = await webUsbConnection.executeInOperation(kvmUsbOperations.GetHidDescriptor, kvmHidIdx);
+    this.matDialog.open<HidDescriptorInspectorDialogComponent, HidDescriptorInspectorDialogData>(HidDescriptorInspectorDialogComponent, {
+      data: {
+        hidDescriptor: hidDescriptorResult.descriptor
+      }
+    });
   }
 }

@@ -21,6 +21,8 @@ export interface BinaryDataReader {
 
   getNextInt64(): bigint;
 
+  getNextStaticBufferOfUint8(length: number): Uint8Array;
+
   getNextStaticArrayOfUint8(length: number): number[];
 
   getNextDynamicArrayOfUint8(): number[];
@@ -83,6 +85,11 @@ export class BinaryDataReaderSizeCalculator implements BinaryDataReader {
   getNextStaticArrayOfUint8(length: number): number[] {
     this.totalSize += length;
     return [];
+  }
+
+  getNextStaticBufferOfUint8(length: number): Uint8Array {
+    this.totalSize += length;
+    return new Uint8Array();
   }
 
   getNextInt64(): bigint {
@@ -176,6 +183,13 @@ export class BinaryDataReaderImpl implements BinaryDataReader {
     }
     return result;
   }
+
+  getNextStaticBufferOfUint8(length: number): Uint8Array {
+    let result = new Uint8Array(this.data.buffer.slice(this.offset, this.offset + length), 0, length);
+    this.offset += length;
+    return result;
+  }
+
 
   getNextDynamicArrayOfUint8(): number[] {
     let length = this.getNextUint8();

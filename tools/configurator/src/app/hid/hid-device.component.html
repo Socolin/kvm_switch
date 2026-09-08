@@ -60,6 +60,7 @@
             <div>
               Interface Protocol: {{ getItfProtocolName(hidInterface.itfProtocol) }} ({{ hidInterface.itfProtocol }})
             </div>
+            <button mat-stroked-button (click)="openHidInspector(hidInterface.kvmHidIdx)">Inspect descriptor</button>
           </mat-expansion-panel>
         }
       </mat-accordion>

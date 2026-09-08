@@ -105,7 +105,7 @@ export const kvmUsbOperations = {
     dynamicData: true,
     deserializeData: (reader: BinaryDataReader) => {
       return {
-        descriptor: reader.getNextStaticArrayOfUint8(reader.byteLength)
+        descriptor: reader.getNextStaticBufferOfUint8(reader.byteLength)
       };
     }
   } satisfies InOperation,
