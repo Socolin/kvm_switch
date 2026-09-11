@@ -1,0 +1,40 @@
+.hid-descriptor-formatted {
+  font-family: monospace;
+  .raw-data {
+    padding-right: 8px;
+    white-space: nowrap;
+  }
+  .formatted-text {
+    white-space: nowrap;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    .indent {
+      width: 24px;
+    }
+  }
+}
+
+
+.hid-item-type-Main {
+  --hid-item-type-color: orange;
+}
+.hid-item-type-Global {
+  --hid-item-type-color: dodgerblue;
+}
+.hid-item-type-Local {
+  --hid-item-type-color: forestgreen;
+}
+
+.hid-item {
+  color: var(--hid-item-type-color);
+}
+.hid-item-type {
+  font-size: 0.75rem;
+  padding: 2px;
+  border: 1px;
+  border-radius: 4px;
+  border-style: solid;
+  border-color: var(--hid-item-type-color);
+}

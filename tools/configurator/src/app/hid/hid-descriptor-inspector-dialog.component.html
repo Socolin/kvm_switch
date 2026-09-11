@@ -1,4 +1,28 @@
 <h2 mat-dialog-title>HID Descriptor</h2>
 <mat-dialog-content>
-  {{data.hidDescriptor}}
+  <table class="hid-descriptor-formatted">
+    @for (hidItem of hidReportDescriptor.items; track $index) {
+      <tr [class]="'hid-item-type-' + hidItemTypeToString(hidItem.itemType)+' hid-item'">
+        <td class="raw-data">
+          @for (b of bufferAsUint8Numbers(hidItem.rawItem); track $index) {
+            {{ b.toString(16).padStart(2, '0') }}
+          }
+        </td>
+        <td class="formatted-text">
+          @for (_i of range(0, hidItem.depth); track $index) {
+            <div class="indent"></div>
+          }
+
+          <span class="hid-item-type" [matTooltip]="hidItemTypeToString(hidItem.itemType)">
+            {{ hidItemTypeToString(hidItem.itemType)[0] }}
+          </span>
+
+          {{ hidItem.text }}@if(hidItem.data !== undefined) {({{hidItem.formattedData ?? hidItem.data}})}
+        </td>
+      </tr>
+    }
+  </table>
 </mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>CLOSE</button>
+</mat-dialog-actions>

@@ -38,9 +38,8 @@ typedef struct __attribute__((packed)) {
     bool preferred_state_no_preferred: 1;
     bool no_null_position_null_state: 1;
     bool non_volatile_volatile: 1;
-    bool reserved1: 1;
     bool bit_field_buffered_bytes: 1;
-    uint32_t reserved2: 22;
+    uint32_t reserved2: 23;
 } hid_report_main_item_flags_t;
 
 #define HID_MAIN_ITEM_IS_DATA(x) (!(x)->data_constant)
