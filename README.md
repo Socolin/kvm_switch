@@ -52,3 +52,10 @@ https://wokwi.com/projects/474027085801457665
 ## Software Architecture
 
 ![Diagram showing the software architecture of the project. Detailing which core execute which part and which the architecture of node and controller boards](doc/img/software_architecture.png)
+
+## Configuration UI
+
+The KVM Switch can be configured through a web UI. It can be access with a web browser supporting WebUSB. The code
+of the config UI is in `tools/configurator`
+
+![Web UI](doc/img/config-ui.png)
