@@ -1,11 +1,13 @@
+import { DatePipe } from '@angular/common';
 import { Component, computed, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatCheckbox } from '@angular/material/checkbox';
 import { MatFormField, MatLabel } from '@angular/material/input';
 import { MatOption, MatSelect } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltip } from '@angular/material/tooltip';
 import { BigIntPipe } from '../utils/big-int-pipe';
-import { KvmLog, KvmLogLevel } from '../web-usb-service';
+import { KvmLog, KvmLogLevel, KvmSwitchInfo } from '../web-usb-service';
 
 @Component({
   imports: [
@@ -16,7 +18,9 @@ import { KvmLog, KvmLogLevel } from '../web-usb-service';
     MatSelect,
     MatOption,
     FormsModule,
-    MatLabel
+    MatLabel,
+    MatCheckbox,
+    DatePipe
   ],
   selector: 'app-kmv-logs',
   styleUrl: './kmv-logs.component.scss',
@@ -24,13 +28,18 @@ import { KvmLog, KvmLogLevel } from '../web-usb-service';
 })
 export class KmvLogsComponent {
   logs = input.required<KvmLog[]>();
+  kvmStartTime = input.required<Date>();
 
   minLogLevel = signal<KvmLogLevel>(KvmLogLevel.Debug);
   filteredLogs = computed(() => {
     return this.logs().filter(x => x.logLevel >= this.minLogLevel());
   });
 
-  // FIXME: Add filter
+  showTimestamp = signal<boolean>(false);
+
+  convertTimestampToDate(timestamp: bigint): Date {
+    return new Date(this.kvmStartTime().getTime() + Number(timestamp / 1_000n));
+  }
 
   logLevelToString(logLevel: KvmLogLevel) {
     switch (logLevel) {

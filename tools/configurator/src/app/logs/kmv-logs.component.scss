@@ -2,6 +2,10 @@
   td {
     padding: 0 5px;
   }
+  .timestamp {
+    white-space: nowrap;
+  }
+
   font-family: monospace;
   .log-level-Debug {
     color: gray;

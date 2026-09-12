@@ -8,10 +8,19 @@
     <mat-option [value]="KvmLogLevel.Critical">Critical</mat-option>
   </mat-select>
 </mat-form-field>
+<mat-checkbox [(ngModel)]="showTimestamp">
+  Show timestamp
+</mat-checkbox>
 <table class="logs-table mat-shadow-2">
   <thead>
     <tr>
-      <td>Time (µs)</td>
+      <td>
+        @if (showTimestamp()) {
+          Time (µs)
+        } @else {
+          Time
+        }
+      </td>
       <td>Level</td>
       <td>Message</td>
     </tr>
@@ -19,8 +28,12 @@
   <tbody>
     @for (log of filteredLogs(); track $index) {
       <tr>
-        <td [matTooltip]="$index > 0 ? 'Diff: ' + (log.timestamp - logs()[$index - 1].timestamp).toString()  + ' µs': undefined">
-          {{log.timestamp | bigint}}
+        <td class="timestamp" [matTooltip]="$index > 0 ? 'Diff: ' + (log.timestamp - logs()[$index - 1].timestamp).toString()  + ' µs': undefined">
+          @if (showTimestamp()) {
+            {{log.timestamp | bigint}}
+          } @else {
+            {{convertTimestampToDate(log.timestamp) | date:'yyyy-MM-dd hh:mm:ss.SSS'}}
+          }
         </td>
         <td class="log-level log-level-{{logLevelToString(log.logLevel)}}">{{logLevelToString(log.logLevel)}}</td>
         <td>[{{log.function}}:{{log.line}}] {{log.message}}</td>

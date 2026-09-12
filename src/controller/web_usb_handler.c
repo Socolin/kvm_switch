@@ -55,6 +55,7 @@ bool tud_vendor_control_xfer_cb(
                         data->computer_count = MAX_COMPUTER;
                         data->hid_interface_count = CFG_TUD_HID;
                         data->hid_device_count = MAX_HID_DEVICE;
+                        data->current_time = time_us_64();
                         return tud_control_xfer(rhport, request, data, sizeof(*data));
                     }
                     case COMMAND_IN_OP_GET_COMPUTER_STATE: {

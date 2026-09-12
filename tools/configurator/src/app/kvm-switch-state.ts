@@ -35,6 +35,14 @@ export class KvmSwitchState {
 
   private logIntervalId = 0;
 
+  kvmStartTime() {
+    let kvmInfo = this.kvmInfo.value();
+    if (!kvmInfo) {
+      return new Date();
+    }
+    return new Date(kvmInfo.now - Number(kvmInfo.currentTime / 1_000n))
+  }
+
   async connectToKvm() {
     clearInterval(this.logIntervalId);
     this.logs.set([]);

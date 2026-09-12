@@ -2,6 +2,7 @@ import { Service, signal } from '@angular/core';
 import { BinaryDataReader, BinaryDataReaderImpl, BinaryDataReaderSizeCalculator } from './utils/binary-data-reader';
 import { BinaryDataWriter } from './utils/binary-data-writer';
 
+export type KvmSwitchInfo = ReturnType<typeof kvmUsbOperations.GetInfo.deserializeData>;
 export type HidState = ReturnType<typeof kvmUsbOperations.GetHidState.deserializeData>;
 export type HidDeviceInfo = ReturnType<typeof kvmUsbOperations.GetHidDevice.deserializeData>;
 export type ShortcutDefinition = ReturnType<typeof kvmUsbOperations.GetKeyboardShortcut.deserializeData>;
@@ -52,7 +53,9 @@ export const kvmUsbOperations = {
         protocolVersion: reader.getNextUint16(),
         computerCount: reader.getNextUint8(),
         hidInterfaceCount: reader.getNextUint8(),
-        hidDeviceCount: reader.getNextUint8()
+        hidDeviceCount: reader.getNextUint8(),
+        currentTime: reader.getNextUint64(),
+        now: Date.now()
       };
     }
   } satisfies InOperation,

@@ -1,8 +1,8 @@
-@if (kvmSwitchState.logs().length > 0) {
+@if (kvmSwitchState.kvmInfo.hasValue() && kvmSwitchState.logs().length > 0) {
   <h2>Logs</h2>
   <mat-card>
     <mat-card-content>
-      <app-kmv-logs [logs]="kvmSwitchState.logs()" />
+      <app-kmv-logs [logs]="kvmSwitchState.logs()" [kvmStartTime]="kvmSwitchState.kvmStartTime()" />
     </mat-card-content>
   </mat-card>
 }

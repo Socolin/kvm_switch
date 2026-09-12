@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { MatIconButton } from '@angular/material/button';
 import { MatCard, MatCardContent, MatCardHeader, MatCardTitle } from '@angular/material/card';
@@ -18,7 +19,8 @@ import {
     MatCardHeader,
     MatCardTitle,
     MatIconButton,
-    MatIcon
+    MatIcon,
+    DatePipe
   ],
   selector: 'app-general-config-panel',
   styleUrl: './general-config-panel.component.scss',

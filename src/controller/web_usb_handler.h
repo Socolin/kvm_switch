@@ -30,6 +30,7 @@ typedef struct __attribute__((packed)) {
     uint8_t computer_count;
     uint8_t hid_interface_count;
     uint8_t hid_device_count;
+    uint64_t current_time;
 } web_usb_cmd_get_info_command_data_t;
 
 typedef struct __attribute__((packed)) {

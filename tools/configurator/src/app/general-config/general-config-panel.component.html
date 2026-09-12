@@ -4,7 +4,7 @@
   <mat-card>
     <mat-card-header>
       <mat-card-title>
-        KVM Config
+        KVM Info
       </mat-card-title>
       <span class="flex-separator"></span>
       <button mat-icon-button (click)="openEditGeneralConfig(generalConfig)">
@@ -12,6 +12,9 @@
       </button>
     </mat-card-header>
     <mat-card-content>
+      <div>
+        Start Time: {{ kvmSwitchState.kvmStartTime() | date:'long' }}
+      </div>
       <div>
         Vid: <code>0x{{ generalConfig.vid.toString(16).padStart(4, '0') }}</code>
       </div>
