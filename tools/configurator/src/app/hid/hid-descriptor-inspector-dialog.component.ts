@@ -9,6 +9,7 @@ import {
 } from '@angular/material/dialog';
 import { MatTooltip } from '@angular/material/tooltip';
 import { HidItemType, HidReportDescriptorDecoder, MainItemTag } from './hid-report-descriptor';
+import { usagePages } from './usage-page';
 
 export type HidDescriptorInspectorDialogData = {
   hidDescriptor: Uint8Array
@@ -32,6 +33,7 @@ export class HidDescriptorInspectorDialogComponent {
   protected readonly MainItemTag = MainItemTag;
   readonly data = inject<HidDescriptorInspectorDialogData>(MAT_DIALOG_DATA);
   readonly hidReportDescriptor = new HidReportDescriptorDecoder().decodeHidReportDescriptor(this.data.hidDescriptor);
+  readonly usagePages = usagePages;
 
   * bufferAsUint8Numbers(buffer: DataView) {
     for (let i = 0; i < buffer.byteLength; i++) {
@@ -56,5 +58,13 @@ export class HidDescriptorInspectorDialogComponent {
       array.push(i);
     }
     return array;
+  }
+
+  protected getUsageString(usagePage: number, usage: number) {
+    let usageText = usagePages[usagePage]?.usages[usage]?.name;
+    if (!usageText) {
+      return usage.toString()
+    }
+    return usageText + ` (${usage.toString()})`;
   }
 }

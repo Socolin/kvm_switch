@@ -1,0 +1,20 @@
+# AI-Generated
+# An Array Input item whose Usages are declared as a list, without a
+# Usage Minimum / Usage Maximum pair.
+# Per HID 1.11 6.2.2.8 the report value selects one of the declared Usages in
+# declaration order: 1 -> Usage 130, 2 -> Usage 129, 3 -> Usage 131.
+# Each declared Usage becomes its own 1 bit control, so this yields 3 fields
+# and not Report Count fields of Report Size bits.
+# The parser does not do this yet: it only reads Usage Minimum / Usage Maximum
+# for Array items, so it currently emits a single 2 bit field with Usage 0-0.
+A1 01 # Collection (Application),
+85 04 #     Report ID (4),
+95 01 #     Report Count (1),
+75 02 #     Report Size (2),
+15 01 #     Logical Minimum (1),
+25 03 #     Logical Maximum (3),
+09 82 #     Usage (130),
+09 81 #     Usage (129),
+09 83 #     Usage (131),
+81 00 #     Input (Data, Array, Absolute),
+C0    # End Collection

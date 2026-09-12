@@ -1,5 +1,45 @@
 <h2 mat-dialog-title>HID Descriptor</h2>
 <mat-dialog-content>
+  <h3>Reports</h3>
+  @for (report of hidReportDescriptor.reports; track $index) {
+    <div class="hid-report">
+      <h4>{{ report.reportType }} - @if(report.reportId) {{{ report.reportId }}} @else { No Report  Id } </h4>
+      <table class="hid-report-fields">
+        <thead>
+        <tr>
+          <th class="bit">Bit</th>
+          <th class="bitSize">Bit Size</th>
+          <th class="usagePage">Usage Page</th>
+          <th class="usage">Usage</th>
+          <th class="logical">Logical</th>
+        </tr>
+        </thead>
+        <tbody>
+          @for (field of report.fields; track $index) {
+            <tr>
+              <td class="bit">{{ field.bitOffset }}</td>
+              <td class="bitSize">{{ field.bitSize }}</td>
+              <td class="usagePage">{{ usagePages[field.usagePage]?.name ?? 'Unknown'  }} ({{ field.usagePage }})</td>
+              <td class="usage">
+                @if (field.usage.kind === 'range') {
+                  {{ getUsageString(field.usagePage, field.usage.range.min) }} .. {{ getUsageString(field.usagePage, field.usage.range.max) }}
+                } @else if (field.usage.kind === 'array') {
+                  @for (v of field.usage.values; track $index) {
+                    {{ getUsageString(field.usagePage, v) }}@if (!$last) {,}
+                  }
+                } @else if (field.usage.kind === 'value') {
+                  {{ getUsageString(field.usagePage, field.usage.value) }}
+                }
+              </td>
+              <td class="logical">{{ field.logical.min }} .. {{ field.logical.max }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <h3>Raw Descriptor</h3>
   <table class="hid-descriptor-formatted">
     @for (hidItem of hidReportDescriptor.items; track $index) {
       <tr [class]="'hid-item-type-' + hidItemTypeToString(hidItem.itemType)+' hid-item'">
@@ -17,7 +57,9 @@
             {{ hidItemTypeToString(hidItem.itemType)[0] }}
           </span>
 
-          {{ hidItem.text }}@if(hidItem.data !== undefined) {({{hidItem.formattedData ?? hidItem.data}})}
+          {{ hidItem.text }}@if (hidItem.data !== undefined) {
+          ({{ hidItem.formattedData ?? hidItem.data }})
+        }
         </td>
       </tr>
     }

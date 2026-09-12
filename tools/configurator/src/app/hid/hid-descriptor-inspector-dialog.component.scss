@@ -16,6 +16,28 @@
   }
 }
 
+.hid-report {
+  .hid-report-fields {
+    font-family: monospace;
+    text-align: left;
+    .bit {
+      padding-right: 16px;
+    }
+    .bitSize {
+      padding-right: 16px;
+    }
+    .usagePage {
+      padding-right: 16px;
+    }
+    .usage {
+      padding-right: 16px;
+    }
+    .logical {
+      min-width: 150px;
+    }
+  }
+}
+
 
 .hid-item-type-Main {
   --hid-item-type-color: orange;

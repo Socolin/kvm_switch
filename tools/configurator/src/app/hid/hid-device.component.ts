@@ -76,7 +76,8 @@ export class HidDeviceComponent {
     this.matDialog.open<HidDescriptorInspectorDialogComponent, HidDescriptorInspectorDialogData>(HidDescriptorInspectorDialogComponent, {
       data: {
         hidDescriptor: hidDescriptorResult.descriptor
-      }
+      },
+      maxWidth: '1200px'
     });
   }
 }

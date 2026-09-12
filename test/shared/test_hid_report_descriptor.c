@@ -144,6 +144,14 @@ void hid_report_descriptor_parse__should_parse_examples_dial() {
     hid_report_descriptor_parse__should_parse_examples("dial");
 }
 
+/**
+ * An Array item that declares its Usages as a list instead of a Usage
+ * Minimum/Maximum pair.
+ */
+void hid_report_descriptor_parse__should_parse_examples_array_usage_list() {
+    hid_report_descriptor_parse__should_parse_examples("array_usage_list");
+}
+
 // Cases that cannot be expressed through print_report_descriptor, because they
 // are about the parser refusing input rather than about what it produces.
 
@@ -270,6 +278,7 @@ int main() {
     RUN_TEST(hid_report_descriptor_parse__should_parse_examples_usage_page_qualified);
     RUN_TEST(hid_report_descriptor_parse__should_parse_examples_report_ids);
     RUN_TEST(hid_report_descriptor_parse__should_parse_examples_dial);
+    RUN_TEST(hid_report_descriptor_parse__should_parse_examples_array_usage_list);
 
     RUN_TEST(hid_report_descriptor_parse__should_not_leak_state_into_the_next_parse);
     RUN_TEST(hid_report_descriptor_parse__should_fail_on_truncated_item);

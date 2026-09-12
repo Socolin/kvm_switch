@@ -1,6 +1,6 @@
 import { Component, input, OnInit, signal } from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
-import { keyCodes } from './shortcut.model';
+import { keyCodes } from '../hid/usage-page';
 
 @Component({
   imports: [

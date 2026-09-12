@@ -1,4 +1,4 @@
-import { Component, computed, HostListener, inject, signal } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import {
@@ -12,10 +12,11 @@ import {
 import { MatIcon } from '@angular/material/icon';
 import { MatInput } from '@angular/material/input';
 import { MatFormField, MatLabel, MatOption, MatSelect } from '@angular/material/select';
+import { keyCodes } from '../hid/usage-page';
 import { KvmSwitchState } from '../kvm-switch-state';
-import { ShortcutKeyComponent } from './shortcut-key.component';
-import { keyCodes, ShortcutActionDataDescriptor, shortcutActionDefinitions } from './shortcut.model';
 import { ShortcutDefinition } from '../web-usb-service';
+import { ShortcutKeyComponent } from './shortcut-key.component';
+import { ShortcutActionDataDescriptor, shortcutActionDefinitions } from './shortcut.model';
 
 export type ShortcutEditDialogData = {
   shortcut: ShortcutDefinition

@@ -1,21 +1,22 @@
-type HidDescriptorField = {
-  mainItemFlags: {
-    value: number;
-    parsedValue: {
-      // FIXME:
-    }
-  }
+import { usagePages } from './usage-page';
 
-  usage_page: number;
+type HidDescriptorReportField = {
+  collection: HidCollection | undefined;
+  mainItemFlags: MainItemFlags;
+
+  usagePage: number;
   usage: {
-    isRange: true,
+    kind: 'range',
     range: {
       min: number,
       max: number
     }
   } | {
-    isRange: false,
+    kind: 'value',
     value: number
+  } | {
+    kind: 'array',
+    values: number[],
   }
 
   logical: {
@@ -31,12 +32,13 @@ type HidDescriptorField = {
   unit: number;
 
   bitSize: number;
+  bitOffset: number;
 }
 
 export enum HidReportType {
-  Input,
-  Output,
-  Feature
+  Input = 'Input',
+  Output = 'Output',
+  Feature = 'Feature'
 }
 
 export enum HidItemType {
@@ -123,7 +125,7 @@ export type HidCollection = {
 export type HidReportDefinition = {
   reportId: number,
   reportType: HidReportType,
-  fields: HidDescriptorField[],
+  fields: HidDescriptorReportField[],
 }
 
 export type HidReportDescriptor = {
@@ -151,11 +153,6 @@ type HidUsage = {
 }
 
 type LocalState = {
-  useRange: boolean;
-  usageCount: number;
-  usages: HidUsage[];
-  usageMin?: HidUsage;
-  usageMax?: HidUsage;
   designatorIndex: number;
   designatorMin: number;
   designatorMax: number;
@@ -163,9 +160,12 @@ type LocalState = {
   stringMin: number;
   stringMax: number;
   delimiter: number;
-}
+  usageMin?: HidUsage;
+  usageMax?: HidUsage;
+  usages?: HidUsage[];
+};
 
-type MainItemFlags = {
+class MainItemFlags {
   dataConstant: boolean;
   arrayVariable: boolean;
   absoluteRelative: boolean;
@@ -175,6 +175,26 @@ type MainItemFlags = {
   noNullPositionNullState: boolean;
   nonVolatileVolatile: boolean;
   bitFieldBufferedBytes: boolean;
+
+  constructor(uData: number) {
+    this.dataConstant = ((uData >> 0) & 1) == 1;
+    this.arrayVariable = ((uData >> 1) & 1) == 1;
+    this.absoluteRelative = ((uData >> 2) & 1) == 1;
+    this.noWrapWrap = ((uData >> 3) & 1) == 1;
+    this.linearNonLinear = ((uData >> 4) & 1) == 1;
+    this.preferredStateNoPreferred = ((uData >> 5) & 1) == 1;
+    this.noNullPositionNullState = ((uData >> 6) & 1) == 1;
+    this.nonVolatileVolatile = ((uData >> 7) & 1) == 1;
+    this.bitFieldBufferedBytes = ((uData >> 8) & 1) == 1;
+  }
+
+  isConstant() {
+    return this.dataConstant;
+  }
+
+  isVariable() {
+    return this.arrayVariable;
+  }
 }
 
 class DecodeContext {
@@ -201,9 +221,6 @@ class DecodeContext {
 
   initLocalStorage() {
     return {
-      useRange: false,
-      usageCount: 0,
-      usages: [],
       designatorIndex: 0,
       designatorMin: 0,
       designatorMax: 0,
@@ -211,7 +228,7 @@ class DecodeContext {
       stringMin: 0,
       stringMax: 0,
       delimiter: 0
-    };
+    } as LocalState;
   }
 
   pushGlobalState() {
@@ -237,6 +254,9 @@ class DecodeContext {
   createCollection(type: HidCollectionType): HidCollection {
 
     let parentCollection = this.collectionStack.length > 0 ? this.collectionStack[this.collectionStack.length - 1] : undefined;
+    if (!this.localState.usages || this.localState.usages.length === 0) {
+      throw new Error('No usage found before the collection');
+    }
     let collection: HidCollection = {
       usagePage: this.localState.usages[0].usagePage ?? this.globalState.usagePage,
       usage: this.localState.usages[0].usage,
@@ -257,161 +277,6 @@ class DecodeContext {
   }
 }
 
-// https://usb.org/document-library/hid-usage-tables-17
-const usagePages: Record<number, { name: string, usages: Record<number, { name: string }> }> = {
-  0: {
-    name: 'Undefined',
-    usages: {},
-  },
-  1: {
-    name: 'Generic Desktop Page',
-    usages: {
-      0x00: { name: 'Undefined' },
-      0x01: { name: 'Pointer' },
-      0x02: { name: 'Mouse' },
-      0x04: { name: 'Joystick' },
-      0x05: { name: 'Gamepad' },
-      0x06: { name: 'Keyboard' },
-      0x07: { name: 'Keypad' },
-    },
-  },
-  2: {
-    name: 'Simulation Controls Page',
-    usages: {},
-  },
-  0x03: {
-    name: 'VR Controls Page',
-    usages: {},
-  },
-  0x04: {
-    name: 'Sport Controls Page',
-    usages: {},
-  },
-  0x05: {
-    name: 'Game Controls Page',
-    usages: {},
-  },
-  0x06: {
-    name: 'Generic Device Controls Page',
-    usages: {},
-  },
-  0x07: {
-    name: 'Keyboard/Keypad Page',
-    usages: {},
-  },
-  0x08: {
-    name: 'LED Page',
-    usages: {},
-  },
-  0x09: {
-    name: 'Button Page',
-    usages: {},
-  },
-  0x0A: {
-    name: 'Ordinal Page',
-    usages: {},
-  },
-  0x0B: {
-    name: 'Telephony Device Page',
-    usages: {},
-  },
-  0x0C: {
-    name: 'Consumer Page',
-    usages: {},
-  },
-  0x0D: {
-    name: 'Digitizers Page',
-    usages: {},
-  },
-  0x0E: {
-    name: 'Haptics Page',
-    usages: {},
-  },
-  0x0F: {
-    name: 'Physical Input Device Page',
-    usages: {},
-  },
-  0x10: {
-    name: 'Unicode Page',
-    usages: {},
-  },
-  0x11: {
-    name: 'SoC Page',
-    usages: {},
-  },
-  0x12: {
-    name: 'Eye and Head Trackers Page',
-    usages: {},
-  },
-  0x14: {
-    name: 'Auxiliary Display Page',
-    usages: {},
-  },
-  0x20: {
-    name: 'Sensors Page',
-    usages: {},
-  },
-  0x40: {
-    name: 'Medical Instrument Page',
-    usages: {},
-  },
-  0x41: {
-    name: 'Braille Display Page',
-    usages: {},
-  },
-  0x59: {
-    name: 'Lighting And Illumination Page',
-    usages: {},
-  },
-  0x80: {
-    name: 'Monitor Page',
-    usages: {},
-  },
-  0x81: {
-    name: 'Monitor Enumerated Page',
-    usages: {},
-  },
-  0x82: {
-    name: 'VESA Virtual Controls Page',
-    usages: {},
-  },
-  0x84: {
-    name: 'Power Page',
-    usages: {},
-  },
-  0x85: {
-    name: 'Battery System Page',
-    usages: {},
-  },
-  0x8C: {
-    name: 'Barcode Scanner Page',
-    usages: {},
-  },
-  0x8D: {
-    name: 'Scales Page',
-    usages: {},
-  },
-  0x8E: {
-    name: 'Magnetic Stripe Reader Page',
-    usages: {},
-  },
-  0x90: {
-    name: 'Camera Control Page',
-    usages: {},
-  },
-  0x91: {
-    name: 'Arcade Page',
-    usages: {},
-  },
-  0x92: {
-    name: 'Gaming Device Page',
-    usages: {},
-  },
-  0xF1D0: {
-    name: 'FIDO Alliance Page',
-    usages: {},
-  },
-};
 
 
 export class HidReportDescriptorDecoder {
@@ -533,6 +398,57 @@ export class HidReportDescriptorDecoder {
     }
   }
 
+  private getOrCreateReport(
+    reportDescriptor: HidReportDescriptor,
+    reportId: number,
+    reportType: HidReportType
+  ): HidReportDefinition {
+    let report = reportDescriptor.reports.find(x => x.reportId == reportId && x.reportType == reportType);
+    if (!report) {
+      report = {
+        reportId: reportId,
+        reportType: reportType,
+        fields: []
+      };
+      reportDescriptor.reports.push(report);
+    }
+    return report;
+  }
+
+  private createReportField(
+    reportDescriptor: HidReportDescriptor,
+    reportId: number,
+    reportType: HidReportType,
+    mainItemFlags: MainItemFlags,
+    collection: HidCollection | undefined
+  ): HidDescriptorReportField {
+    let report = this.getOrCreateReport(reportDescriptor, reportId, reportType);
+    let previousField = report.fields.length === 0 ? undefined : report.fields[report.fields.length - 1];
+    let field: HidDescriptorReportField = {
+      collection: collection,
+      mainItemFlags,
+      bitOffset: previousField ? (previousField.bitOffset + previousField.bitSize) : 0,
+      bitSize: 0,
+      usagePage: 0,
+      usage: {
+        kind: 'value',
+        value: 0
+      },
+      logical: {
+        min: 0,
+        max: 0
+      },
+      physical: {
+        min: 0,
+        max: 0
+      },
+      unit: 0,
+      unitExponent: 0,
+    };
+    report.fields.push(field);
+    return field;
+  }
+
   decodeHidReportDescriptor(rawReportDescriptor: Uint8Array): HidReportDescriptor {
     let result: HidReportDescriptor = {
       items: [],
@@ -644,7 +560,11 @@ export class HidReportDescriptorDecoder {
               data = uData;
               let decodedHidUsage = this.decodeHidUsage(hidItem.dataSize, uData);
               formattedData = usagePages[decodedHidUsage.usagePage ?? decodeContext.globalState.usagePage]?.usages[decodedHidUsage.usage]?.name;
-              decodeContext.updateLocalState(s => s.usages.push(decodedHidUsage));
+
+              decodeContext.updateLocalState(s => {
+                s.usages ??= [];
+                s.usages.push(decodedHidUsage);
+              });
               break;
             case LocalItemTag.UsageMin:
               text = 'UsageMin';
@@ -699,17 +619,7 @@ export class HidReportDescriptorDecoder {
             case MainItemTag.Input:
             case MainItemTag.Output:
             case MainItemTag.Feature: {
-              let mainItemFlags: MainItemFlags = {
-                dataConstant: ((uData >> 0) & 1) == 1,
-                arrayVariable: ((uData >> 1) & 1) == 1,
-                absoluteRelative: ((uData >> 2) & 1) == 1,
-                noWrapWrap: ((uData >> 3) & 1) == 1,
-                linearNonLinear: ((uData >> 4) & 1) == 1,
-                preferredStateNoPreferred: ((uData >> 5) & 1) == 1,
-                noNullPositionNullState: ((uData >> 6) & 1) == 1,
-                nonVolatileVolatile: ((uData >> 7) & 1) == 1,
-                bitFieldBufferedBytes: ((uData >> 8) & 1) == 1
-              };
+              let mainItemFlags: MainItemFlags = new MainItemFlags(uData);
               formattedData = '';
               formattedData += !mainItemFlags.dataConstant ? 'Data' : 'Constant';
               formattedData += ', ' + (!mainItemFlags.arrayVariable ? 'Array' : 'Variable');
@@ -720,6 +630,97 @@ export class HidReportDescriptorDecoder {
               formattedData += ', ' + (!mainItemFlags.noNullPositionNullState ? 'NoNullPosition' : 'NullState');
               formattedData += ', ' + (!mainItemFlags.nonVolatileVolatile ? 'NonVolatile' : 'Volatile');
               formattedData += ', ' + (!mainItemFlags.bitFieldBufferedBytes ? 'BitField' : 'BufferedBytes');
+
+              let reportType: HidReportType;
+              switch (hidItem.tag) {
+                case MainItemTag.Input:
+                  reportType = HidReportType.Input;
+                  break;
+                case MainItemTag.Output:
+                  reportType = HidReportType.Output;
+                  break;
+                case MainItemTag.Feature:
+                  reportType = HidReportType.Feature;
+                  break;
+              }
+              let reportId = decodeContext.globalState.reportId;
+              if (mainItemFlags.isConstant()) {
+                let field: HidDescriptorReportField = this.createReportField(result, reportId, reportType, mainItemFlags, activeCollection);
+                field.bitSize = decodeContext.globalState.reportSize * decodeContext.globalState.reportCount;
+              } else {
+                if (mainItemFlags.isVariable()) {
+                  for (let i = 0; i < decodeContext.globalState.reportCount; i++) {
+                    let usage: number = 0;
+                    let usagePage: number = decodeContext.globalState.usagePage;
+                    if (decodeContext.localState.usageMin && decodeContext.localState.usageMax) {
+                      usage = Math.min(decodeContext.localState.usageMin.usage + i, decodeContext.localState.usageMax.usage);
+                    } else if (decodeContext.localState.usages) {
+                      let contextUsage = decodeContext.localState.usages[Math.min(i, decodeContext.localState.usages.length - 1)];
+                      usage = contextUsage.usage;
+                      if (contextUsage.usagePage) {
+                        usagePage = contextUsage.usagePage;
+                      }
+                    }
+
+                    let field: HidDescriptorReportField = this.createReportField(result, reportId, reportType, mainItemFlags, activeCollection);
+                    field.bitSize = decodeContext.globalState.reportSize;
+
+                    field.usagePage = usagePage;
+                    field.usage = {
+                      kind: 'value',
+                      value: usage,
+                    }
+                    field.logical = {
+                      min: decodeContext.globalState.logicalMin,
+                      max: decodeContext.globalState.logicalMax
+                    };
+                    field.physical = {
+                      min: decodeContext.globalState.physicalMin,
+                      max: decodeContext.globalState.physicalMax
+                    };
+                    field.unit = decodeContext.globalState.unit;
+                    field.unitExponent = decodeContext.globalState.unitExponent;
+                  }
+                } else {
+                  for (let i = 0; i < decodeContext.globalState.reportCount; i++) {
+                    let field: HidDescriptorReportField = this.createReportField(result, reportId, reportType, mainItemFlags, activeCollection);
+                    field.bitSize = decodeContext.globalState.reportSize;
+                    if (decodeContext.localState.usageMin && decodeContext.localState.usageMax) {
+                      field.usage = {
+                        kind: 'range',
+                        range: {
+                          min: decodeContext.localState.usageMin.usage,
+                          max: decodeContext.localState.usageMax.usage
+                        }
+                      };
+                      field.usagePage = decodeContext.localState.usageMin.usagePage ?? decodeContext.globalState.usagePage;
+                    } else if (decodeContext.localState.usages) {
+                      let contextUsage = decodeContext.localState.usages[0];
+                      field.usagePage = contextUsage.usagePage ?? decodeContext.globalState.usagePage;
+                      field.usage = {
+                        kind: 'array',
+                        values: [...decodeContext.localState.usages.map(x => x.usage)],
+                      }
+                    } else {
+                      // If no usage, it's used as padding
+                      field.usage = {
+                        kind: 'value',
+                        value: 0
+                      }
+                    }
+                    field.logical = {
+                      min: decodeContext.globalState.logicalMin,
+                      max: decodeContext.globalState.logicalMax
+                    };
+                    field.physical = {
+                      min: decodeContext.globalState.physicalMin,
+                      max: decodeContext.globalState.physicalMax
+                    };
+                    field.unitExponent = decodeContext.globalState.unitExponent;
+                    field.unit = decodeContext.globalState.unit;
+                  }
+                }
+              }
               break;
             }
           }
