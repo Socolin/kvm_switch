@@ -1,4 +1,7 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, input, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatFormField, MatLabel } from '@angular/material/input';
+import { MatOption, MatSelect } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltip } from '@angular/material/tooltip';
 import { BigIntPipe } from '../utils/big-int-pipe';
@@ -8,7 +11,12 @@ import { KvmLog, KvmLogLevel } from '../web-usb-service';
   imports: [
     MatTableModule,
     BigIntPipe,
-    MatTooltip
+    MatTooltip,
+    MatFormField,
+    MatSelect,
+    MatOption,
+    FormsModule,
+    MatLabel
   ],
   selector: 'app-kmv-logs',
   styleUrl: './kmv-logs.component.scss',
@@ -17,18 +25,27 @@ import { KvmLog, KvmLogLevel } from '../web-usb-service';
 export class KmvLogsComponent {
   logs = input.required<KvmLog[]>();
 
+  minLogLevel = signal<KvmLogLevel>(KvmLogLevel.Debug);
+  filteredLogs = computed(() => {
+    return this.logs().filter(x => x.logLevel >= this.minLogLevel());
+  });
+
+  // FIXME: Add filter
+
   logLevelToString(logLevel: KvmLogLevel) {
     switch (logLevel) {
       case KvmLogLevel.Debug:
-        return "Debug";
+        return 'Debug';
       case KvmLogLevel.Info:
-        return "Info";
+        return 'Info';
       case KvmLogLevel.Warning:
-        return "Warning";
+        return 'Warning';
       case KvmLogLevel.Error:
-        return "Error";
+        return 'Error';
       case KvmLogLevel.Critical:
-        return "Critical";
+        return 'Critical';
     }
   }
+
+  protected readonly KvmLogLevel = KvmLogLevel;
 }

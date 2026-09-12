@@ -1,4 +1,13 @@
-
+<mat-form-field>
+  <mat-label>Min Log Level</mat-label>
+  <mat-select [(ngModel)]="minLogLevel">
+    <mat-option [value]="KvmLogLevel.Debug">Debug</mat-option>
+    <mat-option [value]="KvmLogLevel.Info">Info</mat-option>
+    <mat-option [value]="KvmLogLevel.Warning">Warning</mat-option>
+    <mat-option [value]="KvmLogLevel.Error">Error</mat-option>
+    <mat-option [value]="KvmLogLevel.Critical">Critical</mat-option>
+  </mat-select>
+</mat-form-field>
 <table class="logs-table mat-shadow-2">
   <thead>
     <tr>
@@ -8,9 +17,11 @@
     </tr>
   </thead>
   <tbody>
-    @for (log of logs(); track $index) {
+    @for (log of filteredLogs(); track $index) {
       <tr>
-        <td [matTooltip]="$index > 0 ? 'Diff: ' + (log.timestamp - logs()[$index - 1].timestamp).toString()  + ' µs': undefined">{{log.timestamp | bigint}}</td>
+        <td [matTooltip]="$index > 0 ? 'Diff: ' + (log.timestamp - logs()[$index - 1].timestamp).toString()  + ' µs': undefined">
+          {{log.timestamp | bigint}}
+        </td>
         <td class="log-level log-level-{{logLevelToString(log.logLevel)}}">{{logLevelToString(log.logLevel)}}</td>
         <td>[{{log.function}}:{{log.line}}] {{log.message}}</td>
       </tr>

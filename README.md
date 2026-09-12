@@ -55,7 +55,7 @@ https://wokwi.com/projects/474027085801457665
 
 ## Configuration UI
 
-The KVM Switch can be configured through a web UI. It can be access with a web browser supporting WebUSB. The code
+The KVM Switch can be configured through a web UI. It can be accessed with a web browser supporting WebUSB. The code
 of the config UI is in `tools/configurator`
 
 ![Web UI](doc/img/config-ui.png)
