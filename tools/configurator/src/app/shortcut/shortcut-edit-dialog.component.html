@@ -37,10 +37,21 @@
 
   @let action = shortcutActionDefinitions[actionId()];
   @for (dataDescriptor of action.dataDescriptor; track $index) {
-    <mat-form-field>
-      <mat-label>{{dataDescriptor.name}}</mat-label>
-      <input matInput [ngModel]="getData(dataDescriptor)" (ngModelChange)="setData(dataDescriptor, $event)">
-    </mat-form-field>
+    @if (dataDescriptor.editor === 'computerSelector') {
+      <mat-form-field>
+        <mat-label>{{dataDescriptor.name}}</mat-label>
+        <mat-select [ngModel]="getData(dataDescriptor)" (ngModelChange)="setData(dataDescriptor, $event)">
+          @for (node of nodes(); track node.computerId) {
+            <mat-option [value]="node.computerId">{{ node.computerId }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    } @else {
+      <mat-form-field>
+        <mat-label>{{dataDescriptor.name}}</mat-label>
+        <input matInput [ngModel]="getData(dataDescriptor)" (ngModelChange)="setData(dataDescriptor, $event)">
+      </mat-form-field>
+    }
   }
 </mat-dialog-content>
 <mat-dialog-actions align="end">

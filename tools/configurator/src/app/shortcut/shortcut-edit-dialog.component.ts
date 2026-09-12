@@ -1,4 +1,4 @@
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, computed, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButton, MatIconButton } from '@angular/material/button';
 import {
@@ -12,6 +12,7 @@ import {
 import { MatIcon } from '@angular/material/icon';
 import { MatInput } from '@angular/material/input';
 import { MatFormField, MatLabel, MatOption, MatSelect } from '@angular/material/select';
+import { KvmSwitchState } from '../kvm-switch-state';
 import { ShortcutKeyComponent } from './shortcut-key.component';
 import { keyCodes, ShortcutActionDataDescriptor, shortcutActionDefinitions } from './shortcut.model';
 import { ShortcutDefinition } from '../web-usb-service';
@@ -52,12 +53,14 @@ export class ShortcutEditDialogComponent {
   );
 
   readonly data = inject<ShortcutEditDialogData>(MAT_DIALOG_DATA);
+  readonly kvmSwitchState = inject(KvmSwitchState);
   readonly shortcutActionDefinitions = shortcutActionDefinitions;
 
   actionId = signal(this.data.shortcut.action);
   keys = signal(this.data.shortcut.keys);
   editingKeyIdx = signal(-1);
   actionData = signal(this.data.shortcut.data);
+  nodes = this.kvmSwitchState.computerStates.value;
 
   @HostListener('document:keydown', ['$event']) onKeydownHandler(event: KeyboardEvent) {
     if (this.editingKeyIdx() == -1) {

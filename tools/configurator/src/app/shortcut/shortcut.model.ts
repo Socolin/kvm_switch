@@ -3,6 +3,7 @@ export type ShortcutActionDataDescriptor = {
   dataSize: number,
   dataOffset: number,
   dataType: 'uint8',
+  editor: 'computerSelector',
 }
 
 type ShortcutActionDefinition = {
@@ -17,7 +18,7 @@ export const shortcutActionDefinitions: Record<number, ShortcutActionDefinition>
   2: {
     name: 'Active specific computer',
     dataDescriptor: [
-      { name: 'computerId', dataSize: 1, dataType: 'uint8', dataOffset: 0 }
+      { name: 'computerId', dataSize: 1, dataType: 'uint8', dataOffset: 0, editor: 'computerSelector' }
     ],
     formatDescription: (data: Uint8Array): string => {
       return 'Active computer ' + data[0];
