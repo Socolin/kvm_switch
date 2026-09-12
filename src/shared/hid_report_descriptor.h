@@ -7,11 +7,18 @@
 #define MAX_COLLECTIONS 32
 #define MAX_FIELDS 64
 #define MAX_USAGES 64
+#define MAX_USAGE_PER_FIELD 16
 
 typedef struct {
     int32_t min;
     int32_t max;
 } hid_range_t;
+
+typedef enum {
+    HID_FIELD_USAGE_KIND_VALUE,
+    HID_FIELD_USAGE_KIND_RANGE,
+    HID_FIELD_USAGE_KIND_ARRAY
+} hid_field_usage_kind_t;
 
 typedef struct __attribute((packed)) {
     union {
@@ -19,7 +26,7 @@ typedef struct __attribute((packed)) {
         uint32_t flags;
     } flags;
 
-    bool use_usage_range;
+    hid_field_usage_kind_t usage_kind;
 
     union {
         struct {
@@ -28,6 +35,11 @@ typedef struct __attribute((packed)) {
         } range;
 
         uint16_t value;
+
+        struct {
+            uint8_t value_count;
+            uint16_t values[MAX_USAGE_PER_FIELD];
+        } array;
     } usage;
 
     uint16_t usage_page;

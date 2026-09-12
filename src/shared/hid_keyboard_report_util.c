@@ -74,10 +74,14 @@ size_t hid_report_get_pressed_keys(
             if (hid_field->usage_page == HID_USAGE_PAGE_KEYBOARD) {
                 const uint32_t field_bits = get_bits(report, report_len, bit_offset, hid_field->bit_size);
                 if (field_bits) {
-                    if (hid_field->use_usage_range) {
+                    if (hid_field->usage_kind == HID_FIELD_USAGE_KIND_RANGE) {
                         safe_add_pressed_key(pressed_keys, pressed_keys_len, hid_field->usage.range.min + field_bits, &pressed_keys_count);
-                    } else {
+                    } else if (hid_field->usage_kind == HID_FIELD_USAGE_KIND_VALUE){
                         safe_add_pressed_key(pressed_keys, pressed_keys_len, hid_field->usage.value, &pressed_keys_count);
+                    } else if (hid_field->usage_kind == HID_FIELD_USAGE_KIND_ARRAY) {
+                        const size_t usage_index = field_bits - hid_field->logical.min;
+                        if (usage_index < hid_field->usage.array.value_count)
+                            safe_add_pressed_key(pressed_keys, pressed_keys_len, hid_field->usage.array.values[usage_index], &pressed_keys_count);
                     }
                 }
             }

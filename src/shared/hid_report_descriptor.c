@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "hid_report.h"
+#include "logger.h"
 #include "utils.h"
 
 typedef struct {
@@ -503,7 +504,7 @@ hid_report_descriptor_t *hid_report_descriptor_parse(
                                     }
                                     field->collection_idx = active_collection_idx;
                                     field->bit_size = global_state->report_size;
-                                    field->use_usage_range = false;
+                                    field->usage_kind = HID_FIELD_USAGE_KIND_VALUE;
                                     field->usage.value = usage;
                                     field->usage_page = usage_page;
                                     field->logical = global_state->logical;
@@ -520,13 +521,26 @@ hid_report_descriptor_t *hid_report_descriptor_parse(
                                     }
                                     field->collection_idx = active_collection_idx;
                                     field->bit_size = global_state->report_size;
-                                    field->use_usage_range = true;
-                                    field->usage.range.min = local_state->usage_min.usage;
-                                    field->usage.range.max = local_state->usage_max.usage;
-                                    if (local_state->usage_min.is_extended_usage) {
-                                        field->usage_page = local_state->usage_min.usage_page;
+                                    if (local_state->use_range) {
+                                        field->usage_kind = HID_FIELD_USAGE_KIND_RANGE;
+                                        field->usage.range.min = local_state->usage_min.usage;
+                                        field->usage.range.max = local_state->usage_max.usage;
+                                        if (local_state->usage_min.is_extended_usage) {
+                                            field->usage_page = local_state->usage_min.usage_page;
+                                        } else {
+                                            field->usage_page = global_state->usage_page;
+                                        }
                                     } else {
-                                        field->usage_page = global_state->usage_page;
+                                        field->usage_kind = HID_FIELD_USAGE_KIND_ARRAY;
+                                        uint8_t usage_size = global_state->logical.max - global_state->logical.min + 1;
+                                        if (usage_size > MAX_USAGE_PER_FIELD) {
+                                            goto error;
+                                        }
+                                        for (uint8_t i = 0; i < usage_size; i++) {
+                                            hid_parsing_usage_t parsing_usage = local_state->usages[min16(i, local_state->usage_count - 1)];
+                                            field->usage.array.values[i] = parsing_usage.usage;
+                                        }
+                                        field->usage.array.value_count = usage_size;
                                     }
                                     field->logical = global_state->logical;
                                     field->physical = global_state->physical;
@@ -778,10 +792,23 @@ void hid_report_descriptor_print(
             print(user_data, "    Bits: %u", field->bit_size);
             print(user_data, ", Collection: %" PRId8, field->collection_idx);
             print(user_data, ", UsagePage: %" PRIu16, field->usage_page);
-            if (field->use_usage_range) {
-                print(user_data, ", Usage: %" PRId16 "-%" PRId16, field->usage.range.min, field->usage.range.max);
-            } else {
-                print(user_data, ", Usage: %" PRId16, field->usage.value);
+            switch (field->usage_kind) {
+                case HID_FIELD_USAGE_KIND_VALUE:
+                    print(user_data, ", Usage: %" PRId16, field->usage.value);
+                    break;
+                case HID_FIELD_USAGE_KIND_RANGE:
+                    print(user_data, ", Usage: %" PRId16 "-%" PRId16, field->usage.range.min, field->usage.range.max);
+                    break;
+                case HID_FIELD_USAGE_KIND_ARRAY:
+                    print(user_data, ", Usage: [" );
+                    for (int i = 0; i < field->usage.array.value_count; i++) {
+                        print(user_data, "%" PRId16, field->usage.array.values[i]);
+                        if (i < field->usage.array.value_count - 1) {
+                            print(user_data, ", ");
+                        }
+                    }
+                    print(user_data, "]" );
+                    break;
             }
             print(user_data, ", Logical Minimum: %" PRId32, field->logical.min);
             print(user_data, ", Logical Maximum: %" PRId32, field->logical.max);
