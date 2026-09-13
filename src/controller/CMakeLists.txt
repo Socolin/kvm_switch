@@ -19,6 +19,9 @@ target_link_options(kvm_controller PUBLIC -Wl,--print-memory-usage)
 
 pico_enable_stdio_uart(kvm_controller 1)
 
+add_dependencies(kvm_controller GetGitVersion)
+target_include_directories(kvm_controller PRIVATE ${CMAKE_BINARY_DIR}/generated)
+
 # Make sure TinyUSB can find tusb_config.h
 target_include_directories(kvm_controller PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 

@@ -16,17 +16,15 @@ add_compile_definitions(BUILD_DATE="${BUILD_DATE}")
 
 # Include Git commit hash
 find_package(Git REQUIRED)
-execute_process(
-        COMMAND ${GIT_EXECUTABLE} describe --always --dirty=-custom
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        OUTPUT_VARIABLE GIT_HASH
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
+set(VERSION_HEADER "${CMAKE_CURRENT_BINARY_DIR}/git_version.h")
+add_custom_target(GetGitVersion ALL
+        COMMAND ${CMAKE_COMMAND}
+        -DGIT_EXECUTABLE=${GIT_EXECUTABLE}
+        -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+        -DBINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/GetGitVersion.cmake
+        BYPRODUCTS ${VERSION_HEADER}
 )
-if(NOT GIT_HASH)
-    set(GIT_HASH "unknown")
-endif()
-add_compile_definitions(GIT_HASH="${GIT_HASH}")
 
 
 add_subdirectory("./Pico-PIO-USB" pico_pio_usb)

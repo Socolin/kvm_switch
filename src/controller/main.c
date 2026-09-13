@@ -22,6 +22,7 @@
 #include "quick_reset_button.h"
 #include "usb_host.h"
 #include "version.h"
+#include "git_version.h"
 
 // ╔══════════════════════════════════╗
 // ║     Callback for usb_device      ║

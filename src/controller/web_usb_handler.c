@@ -7,6 +7,7 @@
 #include "utils.h"
 #include "common/tusb_types.h"
 #include "device/usbd.h"
+#include "git_version.h"
 
 // Out / In are relative to the host
 static uint8_t vendor_data_out_buffer[64];

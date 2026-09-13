@@ -12,6 +12,9 @@ add_executable(kvm_node
 
 pico_enable_stdio_uart(kvm_node 1)
 
+add_dependencies(kvm_node GetGitVersion)
+target_include_directories(kvm_node PRIVATE ${CMAKE_BINARY_DIR}/generated)
+
 # Make sure TinyUSB can find tusb_config.h
 target_include_directories(kvm_node PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 

@@ -17,6 +17,7 @@
 #include "logger.h"
 #include "node_link_node.h"
 #include "version.h"
+#include "git_version.h"
 
 static void core1_main() {
     log_debug("Starting node_link loop core 1");
