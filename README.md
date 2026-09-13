@@ -15,7 +15,6 @@ The remaining tasks are:
 - Test with 2 nodes (switch between 3 computers).
 - Design PCB for 1 node (and maybe for 2 nodes later)
 - Write documentation
-- Be able to switch only the keyboard or the mouse
 - Test `TUD_OPT_HIGH_SPEED`
 
 ## AI Usage
@@ -26,7 +25,6 @@ Basically, I see AI as a tool, and I have fun writing code, so:
 - AI was used as a learning assistant, to help understand and learn all the USB / HID / Electronic stuff.
 - AI was used to review the code.
 - AI was used to generate some test cases (but the test logic is human-made) (see `AI-generated` comments).
-- AI was used to generate tool to debug / understand (like `tools/hid_report_descriptor_parser`).
 
 ## History
 
