@@ -24,8 +24,7 @@ static void core1_main() {
 }
 
 int main() {
-    // FIXME: Set clock to the same as controller
-    set_sys_clock_khz(120'000, true);
+    set_sys_clock_khz(144'000, true);
 
     watchdog_enable(5000, 1);
 
