@@ -21,11 +21,7 @@
 #include "node_link_ctrl.h"
 #include "quick_reset_button.h"
 #include "usb_host.h"
-
-#ifndef BUILD_DATE
-#define BUILD_DATE "No date"
-#endif
-
+#include "version.h"
 
 // ╔══════════════════════════════════╗
 // ║     Callback for usb_device      ║
@@ -83,7 +79,8 @@ int main() {
     quick_reset_button_init();
 
     log_info("KVM controller is starting");
-    logf_info("Version: %s", BUILD_DATE);
+    logf_info("Version: %s", GIT_HASH);
+    logf_info("Built at : %s", BUILD_DATE);
 
     computer_manager_init();
     computer_manager_configure_computer(1, 22, 20, 21);

@@ -11,6 +11,7 @@ add_library(shared
         ring_buffer.c
         quick_reset_button.c
         utils.c
+        version.h
 )
 
 target_include_directories(shared

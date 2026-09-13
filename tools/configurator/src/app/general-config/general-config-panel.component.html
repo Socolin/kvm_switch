@@ -13,6 +13,12 @@
     </mat-card-header>
     <mat-card-content>
       <div>
+        Version: {{ kvmSwitchState.kvmInfo.value()?.version }}
+      </div>
+      <div>
+        Build Date: {{ kvmSwitchState.kvmInfo.value()?.buildDate }}
+      </div>
+      <div>
         Start Time: {{ kvmSwitchState.kvmStartTime() | date:'long' }}
       </div>
       <div>

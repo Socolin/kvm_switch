@@ -11,9 +11,23 @@ set(CMAKE_C_STANDARD 23)
 # Set up the SDK
 pico_sdk_init()
 
-# FIXME: Also add git hash
 string(TIMESTAMP BUILD_DATE "%Y-%m-%d %H:%M:%S")
 add_compile_definitions(BUILD_DATE="${BUILD_DATE}")
+
+# Include Git commit hash
+find_package(Git REQUIRED)
+execute_process(
+        COMMAND ${GIT_EXECUTABLE} describe --always --dirty=-custom
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+)
+if(NOT GIT_HASH)
+    set(GIT_HASH "unknown")
+endif()
+add_compile_definitions(GIT_HASH="${GIT_HASH}")
+
 
 add_subdirectory("./Pico-PIO-USB" pico_pio_usb)
 

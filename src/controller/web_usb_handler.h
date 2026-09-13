@@ -3,6 +3,7 @@
 
 #include "kvm_switch_config.h"
 #include "tusb_config.h"
+#include "version.h"
 
 #define WEB_USB_PROTOCOL_VERSION 1
 #define IN_COMMAND(x) x
@@ -25,12 +26,15 @@ enum {
 };
 
 typedef struct __attribute__((packed)) {
-    uint16_t version;
     uint16_t protocol_version;
     uint8_t computer_count;
     uint8_t hid_interface_count;
     uint8_t hid_device_count;
     uint64_t current_time;
+    // uint8_t version_len;
+    // unit8_t *version;
+    // uint8_t build_date_len;
+    // unit8_t *build_date;
 } web_usb_cmd_get_info_command_data_t;
 
 typedef struct __attribute__((packed)) {

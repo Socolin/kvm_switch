@@ -30,6 +30,13 @@ static bool write_to_buffer(
 #define write_value_to_buffer(buffer, buffer_size, offset, data) \
     write_to_buffer(buffer, buffer_size, offset, &data, sizeof(data))
 
+#define write_string_to_buffer(buffer, buffer_size, offset, str)     \
+{                                                                    \
+    uint8_t len = strlen(str);                                       \
+    write_to_buffer(buffer, buffer_size, offset, &len, sizeof(len)); \
+    write_to_buffer(buffer, buffer_size, offset, str, len);          \
+}
+
 bool tud_vendor_control_xfer_cb(
     const uint8_t rhport,
     const uint8_t stage,
@@ -50,13 +57,17 @@ bool tud_vendor_control_xfer_cb(
                 switch (request->bRequest) {
                     case COMMAND_IN_OP_GET_INFO: {
                         auto const data = (web_usb_cmd_get_info_command_data_t *) vendor_data_in_buffer;
-                        data->version = 1; // FIXME: String ?
                         data->protocol_version = WEB_USB_PROTOCOL_VERSION;
                         data->computer_count = MAX_COMPUTER;
                         data->hid_interface_count = CFG_TUD_HID;
                         data->hid_device_count = MAX_HID_DEVICE;
                         data->current_time = time_us_64();
-                        return tud_control_xfer(rhport, request, data, sizeof(*data));
+                        const size_t buffer_size = min16(sizeof(vendor_data_in_buffer), request->wLength);
+                        size_t offset = sizeof(web_usb_cmd_get_info_command_data_t);
+                        uint8_t *buffer = vendor_data_in_buffer;
+                        write_string_to_buffer(buffer, buffer_size, &offset, GIT_HASH)
+                        write_string_to_buffer(buffer, buffer_size, &offset, BUILD_DATE)
+                        return tud_control_xfer(rhport, request, data, offset);
                     }
                     case COMMAND_IN_OP_GET_COMPUTER_STATE: {
                         auto const data = (web_usb_cmd_get_computer_state_data_t *) vendor_data_in_buffer;
@@ -76,7 +87,7 @@ bool tud_vendor_control_xfer_cb(
                         const hid_device_t *hid_device = hid_device_manager_get(request->wValue);
                         if (hid_device == nullptr) {
                             memset(data, 0, sizeof(*data));
-                        return tud_control_xfer(rhport, request, data, sizeof(*data));
+                            return tud_control_xfer(rhport, request, data, sizeof(*data));
                         } else {
                             data->dev_addr = hid_device->dev_addr;
                             data->is_mounted = hid_device->is_mounted;

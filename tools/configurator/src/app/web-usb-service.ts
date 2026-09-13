@@ -47,14 +47,16 @@ export const kvmUsbOperations = {
   GetInfo: {
     opCode: inCommandOpcode(0x01),
     isIn: true,
+    dynamicData: true,
     deserializeData: (reader: BinaryDataReader) => {
       return {
-        version: reader.getNextUint16(),
         protocolVersion: reader.getNextUint16(),
         computerCount: reader.getNextUint8(),
         hidInterfaceCount: reader.getNextUint8(),
         hidDeviceCount: reader.getNextUint8(),
         currentTime: reader.getNextUint64(),
+        version: reader.getNextDynamicString(),
+        buildDate: reader.getNextDynamicString(),
         now: Date.now()
       };
     }

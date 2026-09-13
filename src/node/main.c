@@ -16,10 +16,7 @@
 #include "kvm_switch_node.h"
 #include "logger.h"
 #include "node_link_node.h"
-
-#ifndef BUILD_DATE
-#define BUILD_DATE "No date"
-#endif
+#include "version.h"
 
 static void core1_main() {
     log_debug("Starting node_link loop core 1");
@@ -37,8 +34,8 @@ int main() {
     logger_init(LOG_LEVEL_DEBUG, LOG_LEVEL_INFO);
 
     log_info("KVM node is starting");
-    // FIXME: Add commit hash
-    logf_info("Version: %s", BUILD_DATE);
+    logf_info("Version: %s", GIT_HASH);
+    logf_info("Built at : %s", BUILD_DATE);
 
     quick_reset_button_init();
 
