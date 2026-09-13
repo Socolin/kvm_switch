@@ -39,11 +39,11 @@ static void kvm_config_init_from_default() {
         kvm_config.keyboard_shortcut[i].enabled = false;
     }
     constexpr uint8_t shortcut_1_keys[] = {HID_KEYBOARD_USAGE_SCROLL_LOCK, HID_KEYBOARD_USAGE_1};
-    constexpr uint8_t shortcut_1_data[] = {0};
-    kvm_config_set_shortcut(0, true, CHANGE_ACTIVE_COMPUTER_SET, 2, shortcut_1_keys, 1, shortcut_1_data);
+    constexpr shortcut_action_set_active_computer_data_t shortcut_1_data = {.computer_id = 0};
+    kvm_config_set_shortcut(0, true, CHANGE_ACTIVE_COMPUTER_SET, 2, shortcut_1_keys, sizeof(shortcut_1_data), &shortcut_1_data);
     constexpr uint8_t shortcut_2_keys[] = {HID_KEYBOARD_USAGE_SCROLL_LOCK, HID_KEYBOARD_USAGE_2};
-    constexpr uint8_t shortcut_2_data[] = {1};
-    kvm_config_set_shortcut(1, true, CHANGE_ACTIVE_COMPUTER_SET, 2, shortcut_2_keys, 1, shortcut_2_data);
+    constexpr shortcut_action_set_active_computer_data_t shortcut_2_data = {.computer_id = 1};
+    kvm_config_set_shortcut(1, true, CHANGE_ACTIVE_COMPUTER_SET, 2, shortcut_2_keys, sizeof(shortcut_2_data), &shortcut_2_data);
 }
 
 void kvm_config_init() {
@@ -86,7 +86,7 @@ void kvm_config_set_shortcut(
     const uint8_t key_count,
     const uint8_t *keys,
     const uint8_t data_len,
-    const uint8_t *data
+    const void *data
 ) {
     if (shortcut_id >= MAX_KEYBOARD_SHORTCUT) {
         logf_error("Invalid shortcut ID: %d", shortcut_id);

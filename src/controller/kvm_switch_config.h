@@ -10,7 +10,17 @@ typedef enum {
     CHANGE_ACTIVE_COMPUTER_NEXT,
     CHANGE_ACTIVE_COMPUTER_PREVIOUS,
     CHANGE_ACTIVE_COMPUTER_SET,
+    CHANGE_DEVICE_ACTIVE_COMPUTER_SET,
 } shortcut_action_t;
+
+typedef struct {
+    uint8_t computer_id;
+} shortcut_action_set_active_computer_data_t;
+
+typedef struct {
+    uint8_t computer_id;
+    uint8_t dev_addr;
+} shortcut_action_set_device_active_computer_data_t;
 
 typedef struct __attribute__((packed)) {
     uint8_t shortcut_id;
@@ -45,7 +55,7 @@ void kvm_config_set_shortcut(
     uint8_t key_count,
     const uint8_t *keys,
     uint8_t data_len,
-    const uint8_t *data
+    const void *data
 );
 
 const keyboard_shortcut_t *kvm_config_first_matching_shortcut(

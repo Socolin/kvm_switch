@@ -46,6 +46,17 @@
           }
         </mat-select>
       </mat-form-field>
+    } @else if (dataDescriptor.editor === 'deviceSelector') {
+      <mat-form-field>
+        <mat-label>{{dataDescriptor.name}}</mat-label>
+        <mat-select [ngModel]="getData(dataDescriptor)" (ngModelChange)="setData(dataDescriptor, $event)">
+          @for (hidDevice of Object.values(hidDevices() ?? {}); track hidDevice.devAddr) {
+            <mat-option [value]="hidDevice.devAddr">
+              Device {{ hidDevice.devAddr }} - {{hidDevice.manufacturerName}} - {{hidDevice.productName}}
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
     } @else {
       <mat-form-field>
         <mat-label>{{dataDescriptor.name}}</mat-label>

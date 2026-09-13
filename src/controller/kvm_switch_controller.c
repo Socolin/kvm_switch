@@ -18,7 +18,7 @@
 #include "usb_host.h"
 
 typedef struct {
-    uint8_t active_computer_id;
+    uint8_t active_computer_by_device[MAX_HID_DEVICE];
     uint64_t last_device_mounted;
     uint64_t usb_device_ready;
     uint8_t device_mounted_count;
@@ -40,7 +40,8 @@ static void kvm_switch_ctrl_set_active_computer(
     const uint8_t computer_id
 ) {
     logf_info("KVM Switch: Setting active computer to %u", computer_id);
-    kvm_switch.active_computer_id = computer_id;
+    for (uint8_t device_idx = 0; device_idx < MAX_HID_DEVICE; device_idx++)
+        kvm_switch.active_computer_by_device[device_idx] = computer_id;
 
     const computer_t *computer = computer_manager_get_computer(computer_id);
     for (uint8_t kvm_hid_idx = 0; kvm_hid_idx < CFG_TUH_HID; kvm_hid_idx++) {
@@ -65,6 +66,71 @@ static void kvm_switch_ctrl_set_active_computer(
                 report->report_data_len
             );
             report = report->next;
+        }
+    }
+}
+
+static void kvm_switch_ctrl_set_active_computer_for_device(
+    const uint8_t computer_id,
+    const uint8_t dev_addr
+) {
+    logf_info("KVM Switch: Setting active computer to %u for device: %u", computer_id, dev_addr);
+    kvm_switch.active_computer_by_device[dev_addr - 1] = computer_id;
+
+    const computer_t *computer = computer_manager_get_computer(computer_id);
+    for (uint8_t kvm_hid_idx = 0; kvm_hid_idx < CFG_TUH_HID; kvm_hid_idx++) {
+        const hid_t *hid = hid_mgr_get_by_kvm_idx(kvm_hid_idx);
+        if (hid == nullptr)
+            continue;
+        if (hid->dev_addr != dev_addr)
+            continue;
+
+        usb_host_enqueue_set_protocol(
+            hid->dev_addr,
+            hid->host_hid_idx,
+            computer->hid_protocol_per_interface[kvm_hid_idx]
+        );
+
+        const computer_hid_report_t *report = computer->hid_reports_per_interface[kvm_hid_idx];
+        while (report != nullptr) {
+            usb_host_enqueue_set_report(
+                hid->dev_addr,
+                hid->host_hid_idx,
+                report->report_id,
+                report->report_type,
+                report->report_data,
+                report->report_data_len
+            );
+            report = report->next;
+        }
+    }
+}
+
+static void kvm_switch_controller_execute_shortcut(
+    const keyboard_shortcut_t *shortcut
+) {
+    logf_info("Executing shortcut: %d", shortcut->shortcut_id);
+    switch (shortcut->action) {
+        case CHANGE_ACTIVE_COMPUTER_NEXT: {
+            kvm_switch_ctrl_set_active_computer((kvm_switch.active_computer_by_device[0] + 1) % MAX_COMPUTER);
+            break;
+        }
+        case CHANGE_ACTIVE_COMPUTER_PREVIOUS: {
+            int32_t target_computer_id = kvm_switch.active_computer_by_device[0] - 1;
+            if (target_computer_id < 0)
+                target_computer_id = MAX_COMPUTER - 1;
+            kvm_switch_ctrl_set_active_computer(target_computer_id);
+            break;
+        }
+        case CHANGE_ACTIVE_COMPUTER_SET: {
+            auto const shortcut_data = (shortcut_action_set_active_computer_data_t *) shortcut->data;
+            kvm_switch_ctrl_set_active_computer(shortcut_data->computer_id);
+            break;
+        }
+        case CHANGE_DEVICE_ACTIVE_COMPUTER_SET: {
+            auto const shortcut_data = (shortcut_action_set_device_active_computer_data_t *) shortcut->data;
+            kvm_switch_ctrl_set_active_computer_for_device(shortcut_data->computer_id, shortcut_data->dev_addr);
+            break;
         }
     }
 }
@@ -155,32 +221,16 @@ static void kvm_switch_process_actions() {
                         pressed_keys
                     );
                     if (shortcut) {
-                        logf_info("Executing shortcut: %d", shortcut->shortcut_id);
-                        switch (shortcut->action) {
-                            case CHANGE_ACTIVE_COMPUTER_SET: {
-                                kvm_switch_ctrl_set_active_computer(shortcut->data[0]);
-                                break;
-                            }
-                            case CHANGE_ACTIVE_COMPUTER_NEXT: {
-                                kvm_switch_ctrl_set_active_computer((kvm_switch.active_computer_id + 1) % MAX_COMPUTER);
-                                break;
-                            }
-                            case CHANGE_ACTIVE_COMPUTER_PREVIOUS: {
-                                int32_t target_computer_id = kvm_switch.active_computer_id - 1;
-                                if (target_computer_id < 0)
-                                    target_computer_id = MAX_COMPUTER - 1;
-                                kvm_switch_ctrl_set_active_computer(target_computer_id);
-                                break;
-                            }
-                        }
+                        kvm_switch_controller_execute_shortcut(shortcut);
                         break;
                     }
                 }
-                if (kvm_switch.active_computer_id == LOCAL_COMPUTER_ID) {
+                const uint8_t active_computer_id = kvm_switch.active_computer_by_device[hid->dev_addr - 1];
+                if (active_computer_id == LOCAL_COMPUTER_ID) {
                     usb_device_send_report(hid->kvm_hid_idx, data->report_id, data->report_data, data->report_data_len);
                 } else {
                     node_link_ctrl_enqueue_send_report(
-                        kvm_switch.active_computer_id,
+                        active_computer_id,
                         hid->kvm_hid_idx,
                         data->report_id,
                         data->report_data,
@@ -211,11 +261,15 @@ static void kvm_switch_process_actions() {
                 auto const data = (ksc_action_computer_set_hid_protocol_t *) kvm_switch_action.data;
                 computer_manager_set_hid_protocol(data->computer_id, data->kvm_hid_idx, data->hid_protocol);
 
-                if (kvm_switch.active_computer_id == data->computer_id) {
-                    const hid_t *hid = hid_mgr_get_by_kvm_idx(data->kvm_hid_idx);
-                    if (hid) {
-                        usb_host_enqueue_set_protocol(hid->dev_addr, hid->host_hid_idx, data->hid_protocol);
-                    }
+                const hid_t *hid = hid_mgr_get_by_kvm_idx(data->kvm_hid_idx);
+                if (hid == nullptr) {
+                    logf_warning("hid_mgr_get_by_kvm_idx returned nullptr kvm_hid_idx: %u", data->kvm_hid_idx);
+                    return;
+                }
+
+                const uint8_t active_computer_id = kvm_switch.active_computer_by_device[hid->dev_addr - 1];
+                if (active_computer_id == data->computer_id) {
+                    usb_host_enqueue_set_protocol(hid->dev_addr, hid->host_hid_idx, data->hid_protocol);
                 }
                 break;
             }
@@ -232,18 +286,22 @@ static void kvm_switch_process_actions() {
                     return;
                 }
 
-                if (kvm_switch.active_computer_id == data->computer_id) {
-                    const hid_t *hid = hid_mgr_get_by_kvm_idx(data->kvm_hid_idx);
-                    if (hid) {
-                        usb_host_enqueue_set_report(
-                            hid->dev_addr,
-                            hid->host_hid_idx,
-                            data->report_id,
-                            data->report_type,
-                            data->report_data,
-                            data->report_data_len
-                        );
-                    }
+                const hid_t *hid = hid_mgr_get_by_kvm_idx(data->kvm_hid_idx);
+                if (hid == nullptr) {
+                    logf_warning("hid_mgr_get_by_kvm_idx returned nullptr kvm_hid_idx: %u", data->kvm_hid_idx);
+                    return;
+                }
+
+                const uint8_t active_computer_id = kvm_switch.active_computer_by_device[hid->dev_addr - 1];
+                if (active_computer_id == data->computer_id) {
+                    usb_host_enqueue_set_report(
+                        hid->dev_addr,
+                        hid->host_hid_idx,
+                        data->report_id,
+                        data->report_type,
+                        data->report_data,
+                        data->report_data_len
+                    );
                 }
                 break;
             }

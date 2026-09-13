@@ -62,6 +62,7 @@ export class ShortcutEditDialogComponent {
   editingKeyIdx = signal(-1);
   actionData = signal(this.data.shortcut.data);
   nodes = this.kvmSwitchState.computerStates.value;
+  hidDevices = this.kvmSwitchState.hidDevicesInfo.value;
 
   @HostListener('document:keydown', ['$event']) onKeydownHandler(event: KeyboardEvent) {
     if (this.editingKeyIdx() == -1) {
