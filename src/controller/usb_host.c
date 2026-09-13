@@ -17,6 +17,7 @@ typedef struct {
     queue_t action_queue;
     // When an action is already in progress, we cannot process any other actions
     bool should_process_actions;
+    uint8_t empty_report_received_count;
 } usb_host_t;
 
 static usb_host_t usb_host = {};
@@ -319,8 +320,18 @@ void tuh_hid_report_received_cb(
 
     if (len == 0) {
         log_warning("Received empty report");
+        usb_host.empty_report_received_count++;
+        // When saving to flash the config, this trigger a call to this with an empty report. Probably a problem
+        // with an interrupt due to `flash_safe_execute` so ignore the problem and try again if this is not spamming
+        if (usb_host.empty_report_received_count <= 3) {
+            if (!tuh_hid_receive_report(dev_addr, host_hid_idx)) {
+                log_error("tuh_hid_receive_report failed");
+            }
+        }
         return;
     }
+
+    usb_host.empty_report_received_count = 0;
 
     uint8_t const itf_protocol = tuh_hid_interface_protocol(dev_addr, host_hid_idx);
     const uint8_t hid_protocol = tuh_hid_get_protocol(dev_addr, host_hid_idx);
