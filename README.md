@@ -4,7 +4,7 @@ A KVM Switch for any HID device built with multiple [Raspberry Pi Pico 2](https:
 
 ## Status
 
-This project is still in development.
+This project is still in development. The code is almost done, and I need to design the PCB.
 
 ![Photo of the KVM Switch on a breadboard](doc/img/dev_breadboard.png)
 
@@ -14,6 +14,7 @@ test with exotic keyboard / mouse yet, but those should be supported.
 The remaining tasks are: 
 - Test with 2 nodes (switch between 3 computers).
 - Design PCB for 1 node (and maybe for 2 nodes later)
+- Test with 3 hid devices.
 - Write documentation
 - Test `TUD_OPT_HIGH_SPEED`
 
